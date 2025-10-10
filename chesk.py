@@ -1,11 +1,11 @@
 from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters, Application, \
     ConversationHandler, ChatMemberHandler
-from Crypto.Cipher import DES3
+
 from mongo import *
 import base64, random
 from telethon import utils
 import telethon, pickle, asyncio, os
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackContext, ConversationHandler
 
 import uuid,math
@@ -18,142 +18,11 @@ from datetime import datetime, timedelta, timezone
 
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.functions.account import ResetPasswordRequest,UpdateProfileRequest
-
+from telethon.tl.functions.account import GetPrivacyRequest
+from telethon.tl.types import InputPrivacyKeyPhoneNumber
 import asyncio, re, os, json, requests, io, subprocess
 from pygtrans import Translate
 from collections import defaultdict
-
-
-hf_json = {
-    'addjson': '发送一个协议号包',
-    'ggaiwezi': '发送协议号包',
-    'xadagd123': '发送一个号包',
-    'xytcqtsb': f'''
-🔥批量Session踢出设备
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-''',
-    'tcqtsb': f'''
-🔥批量Tdata踢出设备
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-''',
-    'plggeb': f'''
-🔥批量修改Tdata二级密码
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-''',
-    'xygedxb': f'''
-🔥批量修改Session二级密码
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-    ''',
-    'xyhfgj': '发送一个协议号包',
-    'add2fa': '发送号包, 并附带二步验证',
-    'caijipd': '发送一个协议号包',
-    'xyfxlj': '发送txt文本',
-    'zdgname': f'''
-🔥批量修改账户名字
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号''',    
-    
-    'xygname': f'''
-🔥批量修改账户名字
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号''',
-    
-    
-    'zdgjj': f'''
-🔥批量修改简介
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号''',
-    'xygjj': f'''
-🔥批量修改简介
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-    ''',
-    'zdzz2fa': f'''
-🔥批量Tdata重置二步
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-''',
-    'xyzz2fa': f'''
-🔥批量Session重置二步
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-''',
-    'zdzpdjqr': f'''
-🔥可批量关注指定频道 每次只能发送一个频道
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-    ''',
-    'xyzpdjqr': f'''
-🔥可批量关注指定频道 每次只能发送一个频道
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-    ''',
-    'ysbcf': '发送压缩包',
-    'wbwjcf': '发送txt文本',
-    'jcshuax': f'''
-🔥檢查Tdata双向情況
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号''',
-    'xyjcsx': f'''
-🔥檢查Ssession双向情況
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号''',
-    'zdjcch': f'''
-🔥檢查Tdata存活情況
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-    ''',
-    'xyjcch': f'''
-🔥檢查协议号存活情況
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
-    ''',
-    'tdatatosession': f'''
-🔥 使用Tdata文件生成 session
-🗂 请发送压缩包zip格式
-‼️ 请不要发送超过10000个账号
-    ''',
-    'sessiontotdata': f'''
-🔥 使用session文件生成 Tdata
-🗂 请发送压缩包zip格式
-‼️ 请不要发送超过10000个账号
-    '''
-}
-
-keyboard_dict = {
-    '添加json': 'addjson',
-    '更改文字': 'ggaiwezi',
-    '过滤-': 'xadagd123',
-    'Tdata踢出其他设备': 'tcqtsb',
-    'Session踢出其他设备': 'xytcqtsb',
-    'Tdata修改二级密码': 'plggeb',
-    'Session修改二级密码': 'xygedxb',
-    '协议划分国家': 'xyhfgj',
-    '添加二步验证文本': 'add2fa',
-    '协议采集频道': 'caijipd',
-    '协议分析链接': 'xyfxlj',
-    'Tdata（直登）修改姓名': 'zdgname',
-    'Session（协议）修改姓名': 'xygname',
-    'Tdata（直登）修改简介': 'zdgjj',
-    'Session（协议）修改简介': 'xygjj',
-    'Tdata重置2FA': 'zdzz2fa',
-    'Session重置2FA': 'xyzz2fa',
-    'Tdata（直登）关注频道': 'zdzpdjqr',
-    'Session（协议）关注频道': 'xyzpdjqr',
-    '压缩包拆分': 'ysbcf',
-    '文本文件拆分': 'wbwjcf',
-    '检查Tdata双向': 'jcshuax',
-    '检查Session双向': 'xyjcsx',
-    '检查Tdata（直登）': 'zdjcch',
-    '检查Session（协议）': 'xyjcch',
-    'Tdata 转换session': 'tdatatosession',
-    'Session 转换Tdata': 'sessiontotdata'
-}
-
 
 def get_fy(fstext):
     fy_list = fyb.find_one({'text': fstext})
@@ -167,7 +36,7 @@ def get_fy(fstext):
         
         return fanyi 
 
-async def xygzpd(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb, sblist):
+async def xygzpd(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb):
     async with semaphore:
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
         client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
@@ -202,10 +71,7 @@ async def xygzpd(selected_item, phone, semaphore, result_dict, kepro, fenjin, gz
                         channel=i
                     ))
             except:
-                result_dict['sb'] += 1
-                await client.disconnect()
-                sblist.append(phone)
-                return
+                pass
         
         result_dict['alive'] += 1
         kepro.append(phone)
@@ -294,7 +160,7 @@ async def xycaijipd(selected_item, phone, semaphore, result_dict, kepro, fenjin,
         
         
         
-async def xyxgjianjie(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb, sblist):
+async def xyxgjianjie(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb):
     async with semaphore:
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
         client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
@@ -323,17 +189,14 @@ async def xyxgjianjie(selected_item, phone, semaphore, result_dict, kepro, fenji
                 about=gzlb
             ))
         except:
-            result_dict['sb'] += 1
-            await client.disconnect()
-            sblist.append(phone)
-            return
+            pass
         
         result_dict['alive'] += 1
         kepro.append(phone)
         await client.disconnect()
     
         
-async def zdxgjianjie(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb, sblist):
+async def zdxgjianjie(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -368,15 +231,12 @@ async def zdxgjianjie(selected_item, phone, semaphore, result_dict, kepro, fenji
                 about=gzlb
             ))
         except:
-            result_dict['sb'] += 1
-            await client.disconnect()
-            sblist.append(phone)
-            return
+            pass
         result_dict['alive'] += 1
         kepro.append(phone)
         await client.disconnect()
 
-async def xyxgmzi(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb, sblist):
+async def xyxgmzi(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb):
     async with semaphore:
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
         client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
@@ -406,17 +266,14 @@ async def xyxgmzi(selected_item, phone, semaphore, result_dict, kepro, fenjin, g
                 last_name=''
             ))
         except:
-            result_dict['sb'] += 1
-            await client.disconnect()
-            sblist.append(phone)
-            return
+            pass
         
         result_dict['alive'] += 1
         kepro.append(phone)
         await client.disconnect()
         
         
-async def zdxgmzi(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb, sblist):
+async def zdxgmzi(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -452,15 +309,12 @@ async def zdxgmzi(selected_item, phone, semaphore, result_dict, kepro, fenjin, g
                 last_name=''
             ))
         except:
-            result_dict['sb'] += 1
-            await client.disconnect()
-            sblist.append(phone)
-            return
+            pass
         result_dict['alive'] += 1
         kepro.append(phone)
         await client.disconnect()
 
-async def zdgzpd(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb, sblist):
+async def zdgzpd(selected_item, phone, semaphore, result_dict, kepro, fenjin, gzlb):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -500,16 +354,13 @@ async def zdgzpd(selected_item, phone, semaphore, result_dict, kepro, fenjin, gz
                         channel=i
                     ))
             except:
-                result_dict['sb'] += 1
-                await client.disconnect()
-                sblist.append(phone)
-                return
+                pass
         result_dict['alive'] += 1
         kepro.append(phone)
         await client.disconnect()
         
         
-async def xieyizhuanzhideng(selected_item, phone, semaphore, result_dict, kepro, fenjin, wxylist):
+async def xieyizhuanzhideng(selected_item, phone, semaphore, result_dict, kepro, fenjin):
     async with semaphore:
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
         client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
@@ -517,9 +368,9 @@ async def xieyizhuanzhideng(selected_item, phone, semaphore, result_dict, kepro,
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
+            result_dict['dead'] += 1
             await client.disconnect()
-            wxylist.append(phone)
+            fenjin.append(phone)
             return
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
@@ -539,7 +390,7 @@ async def xieyizhuanzhideng(selected_item, phone, semaphore, result_dict, kepro,
         kepro.append(phone)
         await client.disconnect()
 
-async def xyerbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin, wxylist):
+async def xyerbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin):
     async with semaphore:
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
         client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
@@ -547,9 +398,9 @@ async def xyerbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin, w
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
+            result_dict['dead'] += 1
             await client.disconnect()
-            wxylist.append(phone)
+            fenjin.append(phone)
             return
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
@@ -580,7 +431,7 @@ async def xyerbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin, w
         kepro.append(phone)
         await client.disconnect()
 
-async def xytcsb(selected_item, phone, semaphore, result_dict, kepro, fenjin, wxylist):
+async def xytcsb(selected_item, phone, semaphore, result_dict, kepro, fenjin):
     async with semaphore:
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
         client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
@@ -588,9 +439,9 @@ async def xytcsb(selected_item, phone, semaphore, result_dict, kepro, fenjin, wx
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
-            wxylist.append(phone)
+            result_dict['dead'] += 1
             await client.disconnect()
+            fenjin.append(phone)
             return
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
@@ -624,7 +475,7 @@ async def xytcsb(selected_item, phone, semaphore, result_dict, kepro, fenjin, wx
         
         
         
-async def zdqtcbsb(selected_item, phone, semaphore, result_dict, kepro, fenjin, wxylist):
+async def zdqtcbsb(selected_item, phone, semaphore, result_dict, kepro, fenjin):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -637,11 +488,11 @@ async def zdqtcbsb(selected_item, phone, semaphore, result_dict, kepro, fenjin, 
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
+            result_dict['dead'] += 1
             await client.disconnect()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            wxylist.append(phone)
+            fenjin.append(phone)
             return
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
@@ -680,7 +531,7 @@ async def zdqtcbsb(selected_item, phone, semaphore, result_dict, kepro, fenjin, 
             return
             
             
-async def zderbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin, wxylist):
+async def zderbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -693,11 +544,11 @@ async def zderbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin, w
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
+            result_dict['dead'] += 1
             await client.disconnect()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            wxylist.append(phone)
+            fenjin.append(phone)
             return
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
@@ -736,7 +587,7 @@ async def zderbzz(selected_item, phone, semaphore, result_dict, kepro, fenjin, w
             os.remove(file_path)
             
             
-async def zhidengzhuan(selected_item, phone, semaphore, result_dict, kepro, fenjin, wxylist):
+async def zhidengzhuan(selected_item, phone, semaphore, result_dict, kepro, fenjin):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -749,9 +600,9 @@ async def zhidengzhuan(selected_item, phone, semaphore, result_dict, kepro, fenj
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
+            result_dict['dead'] += 1
             await client.disconnect()
-            wxylist.append(phone)
+            fenjin.append(phone)
             return
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
@@ -772,7 +623,7 @@ async def zhidengzhuan(selected_item, phone, semaphore, result_dict, kepro, fenj
         kepro.append(phone)
         await client.disconnect()
 
-async def plgaxyierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro, fenjin):
+async def plgaxyierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro):
     async with semaphore:
         jeb1 = jeb.split(' ')
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
@@ -824,7 +675,7 @@ async def plgaxyierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, ke
 
 
 
-async def plgaierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro, fenjin):
+async def plgaierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro):
     async with semaphore:
         jeb1 = jeb.split(' ')
         lujin = f'{selected_item}/{phone}/tdata'
@@ -839,14 +690,14 @@ async def plgaierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepr
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
             result_dict['dead'] += 1
-            fenjin.append(phone)
+            sbpro.append(phone)
             await client.disconnect()
             if os.path.exists(file_path):
                 os.remove(file_path)
             return
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
-            fenjin.append(phone)
+            sbpro.append(phone)
             await client.disconnect()
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -887,7 +738,7 @@ async def plgaierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepr
             os.remove(file_path)
 
 
-async def zdshuangxiang(selected_item, phone, semaphore, result_dict, kepro, sxjin, wxylist, bkylist):
+async def zdshuangxiang(selected_item, phone, semaphore, result_dict, kepro, sxjin):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -900,33 +751,36 @@ async def zdshuangxiang(selected_item, phone, semaphore, result_dict, kepro, sxj
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
-            wxylist.append(phone)
+            result_dict['dead'] += 1
             await client.disconnect()
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return
-
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
-            bkylist.append(phone)
             await client.disconnect()
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return
+
         a = await client.get_me()
         if a is None:
             result_dict['dead'] += 1
-            bkylist.append(phone)
             await client.disconnect()
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return
+        
         result_dict['alive'] += 1
-        
-        
         try:
             await client.send_message('SpamBot', '/start')
             await asyncio.sleep(0.5)
             entity = await client.get_entity(178220800)
         except:
             result_dict['dead'] += 1
-            bkylist.append(phone)
             await client.disconnect()
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return
             
             
@@ -937,41 +791,36 @@ async def zdshuangxiang(selected_item, phone, semaphore, result_dict, kepro, sxj
             if 'While the account is limited' in text:
                 result_dict['sx'] += 1
                 sxjin.append(phone)
+                
             else:
                 result_dict['zc'] += 1
-                
                 kepro.append(phone)
         await client.disconnect()
         if os.path.exists(file_path):
             os.remove(file_path)
 
 
-async def xyshaungxiang(selected_item, phone, semaphore, result_dict, kepro, sxjin, wxylist, kylist, bkylist):
+async def xyshaungxiang(selected_item, phone, semaphore, result_dict, kepro, sxjin):
     async with semaphore:
         oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
         client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
-            wxylist.append(phone)
+            result_dict['dead'] += 1
             await client.disconnect()
             return
 
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
             result_dict['dead'] += 1
-            bkylist.append(phone)
             await client.disconnect()
             return
         a = await client.get_me()
         if a is None:
             result_dict['dead'] += 1
-            bkylist.append(phone)
             await client.disconnect()
             return
         result_dict['alive'] += 1
-        
-        
         
         try:
             await client.send_message('SpamBot', '/start')
@@ -979,9 +828,9 @@ async def xyshaungxiang(selected_item, phone, semaphore, result_dict, kepro, sxj
             entity = await client.get_entity(178220800)
         except:
             result_dict['dead'] += 1
-            bkylist.append(phone)
             await client.disconnect()
             return
+
         async for message in client.iter_messages(entity, 1):
             date = message.date
             text = message.raw_text
@@ -998,7 +847,7 @@ async def xyshaungxiang(selected_item, phone, semaphore, result_dict, kepro, sxj
         
     
 
-async def jiancecunhuo(selected_item, phone, semaphore, result_dict, ch_list, sh_list, wxylist):
+async def jiancecunhuo(selected_item, phone, semaphore, result_dict, ch_list, sh_list, dj_list):
     async with semaphore:
         lujin = f'{selected_item}/{phone}/tdata'
         tdesk = TDesktop(lujin)
@@ -1011,8 +860,8 @@ async def jiancecunhuo(selected_item, phone, semaphore, result_dict, ch_list, sh
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
-            wxylist.append(phone)
+            result_dict['dead'] += 1
+            sh_list.append(phone)
             await client.disconnect()
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -1033,6 +882,20 @@ async def jiancecunhuo(selected_item, phone, semaphore, result_dict, ch_list, sh
             if os.path.exists(file_path):
                 os.remove(file_path)
             return
+        
+        try:
+            privacy_key = InputPrivacyKeyPhoneNumber()
+            result = await client(GetPrivacyRequest(key=privacy_key))
+        except telethon.errors.rpcbaseerrors.FloodError:
+            result_dict['dj'] += 1
+            await client.disconnect()
+            dj_list.append(phone)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return
+        
+        
+        
         result_dict['alive'] += 1
         ch_list.append(phone)
         await client.disconnect()
@@ -1041,16 +904,21 @@ async def jiancecunhuo(selected_item, phone, semaphore, result_dict, ch_list, sh
 
 
 
-async def xieyijiance(selected_item, phone, semaphore, result_dict,ch_list, sh_list, wxylist):
+async def xieyijiance(selected_item, phone, semaphore, result_dict, ch_list, sh_list, dj_list):
     async with semaphore:
-        oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
-        client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
+        try:
+            oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
+            client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
+        except:
+            result_dict['dead'] += 1
+            sh_list.append(phone)
+            return
         try:
             await asyncio.wait_for(client.connect(), 20)
         except asyncio.exceptions.TimeoutError:
-            result_dict['wxy'] += 1
+            result_dict['dead'] += 1
             await client.disconnect()
-            wxylist.append(phone)
+            sh_list.append(phone)
             return
 
         except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
@@ -1063,6 +931,14 @@ async def xieyijiance(selected_item, phone, semaphore, result_dict,ch_list, sh_l
             result_dict['dead'] += 1
             await client.disconnect()
             sh_list.append(phone)
+            return
+        try:
+            privacy_key = InputPrivacyKeyPhoneNumber()
+            result = await client(GetPrivacyRequest(key=privacy_key))
+        except telethon.errors.rpcbaseerrors.FloodError:
+            result_dict['dj'] += 1
+            await client.disconnect()
+            dj_list.append(phone)
             return
         result_dict['alive'] += 1
         ch_list.append(phone)
@@ -1137,80 +1013,30 @@ async def start(update: Update, context: CallbackContext):
 
     elif user.find_one({'user_id': user_id})['fullname'] != fullname:
         user.update_one({'user_id': user_id}, {'$set': {'fullname': fullname}})
-    for i in ['GTQG18','FUSUFH','moli010203','a8ppp','o7eth','o9eth','dluboqu', 'Tdatatosession', 'H_ugeojbk518', 'Darling8_888']:
+    for i in ['bocebob','FUSUFH','moli010203','a8ppp','o7eth','o9eth','mm88222']:
         if username == i:
             user.update_one({'username': i}, {'$set': {'state': '4'}})
-    # user_list = user.find_one({"user_id": user_id})
-    # state = user_list['state']
-    # if state != '4':
-    #     return
-    user_list = user.find_one({'user_id': user_id})
-    ptgrade = user_list['ptgrade']
-    if ptgrade == '新用户':
-        timer = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        now = datetime.now()
-        Expiration = (now + timedelta(hours=6)).strftime(f"%Y-%m-%d %H:{timer[-5:]}")
-        user.update_one({'user_id': user_id}, {"$set": {"Expiration": Expiration}})
-        user.update_one({'user_id': user_id}, {"$set": {"ptgrade": '一般用户'}})
-        await context.bot.send_message(chat_id=user_id,text=f'<b>机器人试用权截止: {Expiration}</b>', parse_mode='HTML')
-    else:
-        timer = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        Expiration = user_list['Expiration']
-        if timer >= Expiration:
-            await context.bot.send_message(chat_id=user_id,text=f'<b>已到期,联系管理员开卡</b>', parse_mode='HTML')
-            return
-        await context.bot.send_message(chat_id=user_id,text=f'<b>机器人试用权截止: {Expiration}</b>', parse_mode='HTML')
-        
+    user_list = user.find_one({"user_id": user_id})
+    state = user_list['state']
+    if state != '4':
+        return
     keyboard = [
-        [KeyboardButton("Tdata重置2FA"), KeyboardButton("Session重置2FA")],
-        [KeyboardButton('Tdata踢出其他设备'), KeyboardButton('Session踢出其他设备')],
-        [KeyboardButton('Tdata修改二级密码'), KeyboardButton('Session修改二级密码')],
-        [KeyboardButton('Tdata（直登）修改姓名'), KeyboardButton('Session（协议）修改姓名')],
-        [KeyboardButton('Tdata（直登）修改简介'), KeyboardButton('Session（协议）修改简介')],
-        [KeyboardButton('Tdata（直登）关注频道'), KeyboardButton('Session（协议）关注频道')],
-        [KeyboardButton('检查Tdata双向'), KeyboardButton('检查Session双向')],
-        [KeyboardButton('检查Tdata（直登）'), KeyboardButton('检查Session（协议）')],
-        [KeyboardButton('Tdata 转换session'), KeyboardButton('Session 转换Tdata')]
-    ] 
-    # keyboard = [
-    #     [KeyboardButton('添加json')],
-    #     [KeyboardButton('更改文字'), KeyboardButton('过滤-')],
-    #     [KeyboardButton('Tdata踢出其他设备'), KeyboardButton('Session踢出其他设备')],
-    #     [KeyboardButton('Tdata修改二级密码'), KeyboardButton('Session修改二级密码')],
-    #     [KeyboardButton('协议划分国家'), KeyboardButton('添加二步验证文本')],
-    #     [KeyboardButton('协议采集频道'), KeyboardButton('协议分析链接')],
-    #     [KeyboardButton('Tdata（直登）修改姓名'), KeyboardButton('Session（协议）修改姓名')],
-    #     [KeyboardButton('Tdata（直登）修改简介'), KeyboardButton('Session（协议）修改简介')],
-    #     [KeyboardButton('Tdata重置2FA'), KeyboardButton('Session重置2FA')],
-    #     [KeyboardButton('Tdata（直登）关注频道'), KeyboardButton('Session（协议）关注频道')],
-    #     [KeyboardButton('压缩包拆分'), KeyboardButton('文本文件拆分')],
-    #     [KeyboardButton('检查Tdata双向'), KeyboardButton('检查Session双向')],
-    #     [KeyboardButton('检查Tdata（直登）'), KeyboardButton('检查Session（协议）')],
-    #     [KeyboardButton('Tdata 转换session'), KeyboardButton('Session 转换Tdata')]
-    # ]
-    fstext = f'''
-<b>💥欢迎使用！
-👇请查看底部按钮，并选择您需要的功能！</b>
-    '''
-    await context.bot.send_message(chat_id=user_id, text=fstext,reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True,
-                                                                  one_time_keyboard=False),parse_mode='HTML')
-    # keyboard = [
-    #     [InlineKeyboardButton('添加json', callback_data='addjson')],
-    #     [InlineKeyboardButton('更改文字', callback_data='ggaiwezi'), InlineKeyboardButton('过滤-', callback_data='xadagd123')],
-    #     [InlineKeyboardButton('Tdata踢出其他设备', callback_data='tcqtsb'),InlineKeyboardButton('Session踢出其他设备', callback_data='xytcqtsb')],
-    #     [InlineKeyboardButton('Tdata修改二级密码', callback_data='plggeb'), InlineKeyboardButton('Session修改二级密码', callback_data='xygedxb')],
-    #     [InlineKeyboardButton('协议划分国家', callback_data='xyhfgj'),InlineKeyboardButton('添加二步验证文本', callback_data='add2fa')],
-    #     [InlineKeyboardButton('协议采集频道', callback_data='caijipd'), InlineKeyboardButton('协议分析链接', callback_data='xyfxlj')],
-    #     [InlineKeyboardButton('Tdata（直登）修改姓名', callback_data='zdgname'), InlineKeyboardButton("Session（协议）修改姓名", callback_data='xygname')],
-    #     [InlineKeyboardButton('Tdata（直登）修改简介', callback_data='zdgjj'), InlineKeyboardButton("Session（协议）修改简介", callback_data='xygjj')],
-    #     [InlineKeyboardButton('Tdata重置2FA', callback_data='zdzz2fa'), InlineKeyboardButton('Session重置2FA', callback_data='xyzz2fa')],
-    #     [InlineKeyboardButton('Tdata（直登）关注频道', callback_data='zdzpdjqr'), InlineKeyboardButton('Session（协议）关注频道', callback_data='xyzpdjqr')],
-    #     [InlineKeyboardButton('压缩包拆分', callback_data='ysbcf'), InlineKeyboardButton('文本文件拆分', callback_data='wbwjcf')],
-    #     [InlineKeyboardButton('检查Tdata双向', callback_data='jcshuax'),InlineKeyboardButton('检查Session双向', callback_data='xyjcsx')],
-    #     [InlineKeyboardButton("检查Tdata（直登）", callback_data='zdjcch'), InlineKeyboardButton('检查Session（协议）', callback_data='xyjcch')],
-    #     [InlineKeyboardButton('Tdata 转换session', callback_data='tdatatosession'), InlineKeyboardButton('Session 转换Tdata', callback_data='sessiontotdata')]
-    # ]
-    # await context.bot.send_message(chat_id=user_id, text='后台', reply_markup=InlineKeyboardMarkup(keyboard))
+        [InlineKeyboardButton('添加json', callback_data='addjson'), InlineKeyboardButton('协议拆分', callback_data='xieyicaifen')],
+        [InlineKeyboardButton('更改文字', callback_data='ggaiwezi'), InlineKeyboardButton('过滤-', callback_data='xadagd123')],
+        [InlineKeyboardButton('直登踢出其他设备', callback_data='tcqtsb'),InlineKeyboardButton('协议踢出其他设备', callback_data='xytcqtsb')],
+        [InlineKeyboardButton('直登批量更改二步', callback_data='plggeb'), InlineKeyboardButton('协议批量更改二步', callback_data='xygedxb')],
+        [InlineKeyboardButton('协议划分国家', callback_data='xyhfgj'),InlineKeyboardButton('添加二步验证文本', callback_data='add2fa')],
+        [InlineKeyboardButton('协议采集频道', callback_data='caijipd'), InlineKeyboardButton('协议分析链接', callback_data='xyfxlj')],
+        [InlineKeyboardButton('直登改名字', callback_data='zdgname'), InlineKeyboardButton("协议改名字", callback_data='xygname')],
+        [InlineKeyboardButton('直登改简介', callback_data='zdgjj'), InlineKeyboardButton("协议改简介", callback_data='xygjj')],
+        [InlineKeyboardButton('直登重置二步', callback_data='zdzz2fa'), InlineKeyboardButton('协议重置二步', callback_data='xyzz2fa')],
+        [InlineKeyboardButton('直登关注', callback_data='zdzpdjqr'), InlineKeyboardButton('协议关注', callback_data='xyzpdjqr')],
+        [InlineKeyboardButton('压缩包拆分', callback_data='ysbcf'), InlineKeyboardButton('文本文件拆分', callback_data='wbwjcf')],
+        [InlineKeyboardButton('直登检测双向', callback_data='jcshuax'),InlineKeyboardButton('协议检测双向', callback_data='xyjcsx')],
+        [InlineKeyboardButton("直登号检测存活", callback_data='zdjcch'), InlineKeyboardButton('协议号检测存活', callback_data='xyjcch')],
+        [InlineKeyboardButton('tdata to session', callback_data='tdatatosession'), InlineKeyboardButton('session to tdata', callback_data='sessiontotdata')]
+    ]
+    await context.bot.send_message(chat_id=user_id, text='后台', reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def addjson(update: Update, context: CallbackContext):
@@ -1219,9 +1045,9 @@ async def addjson(update: Update, context: CallbackContext):
     await query.answer()
     bot_id = context.bot.id
     fstext = f'''
-发送一个协议号包
+请输入你要更改的 2fa 内容
     '''
-    user.update_one({"user_id": user_id}, {"$set": {"sign": f'addjson'}})
+    user.update_one({"user_id": user_id}, {"$set": {"sign": f'addjsontext'}})
     keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
     await context.bot.send_message(chat_id=user_id, text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
     
@@ -1342,25 +1168,29 @@ async def qrxxygeb(update: Update, context: CallbackContext):
     jeb = data[0]
     xeb = data[1]
     gg_list = context.user_data[f'xygeb{user_id}']
-    message_id = await context.bot.send_message(chat_id=user_id, text='<b>💫正在批量修改中，请等待···</b>', parse_mode='HTML')
+    
+    
+    
+    message_id = await context.bot.send_message(chat_id=user_id, text='更改中')
     folder_names = []
     for i in gg_list:
         folder_names.append(i)
     kepro = []
     sbpro = []
-    fenjin = []
     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-    result_dict = {'alive': 0, 'dead': 0, 'cgeb': 0, 'sbeb': 0, 'wxy': 0}
+    result_dict = {'alive': 0, 'dead': 0, 'cgeb': 0, 'sbeb': 0}
     await asyncio.gather(
-        *(plgaxyierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb,xeb, kepro, sbpro, fenjin) for subfolder in
+        *(plgaxyierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb,xeb, kepro, sbpro) for subfolder in
           folder_names))
 
     fstext = f'''
-<b>✅ 成功（修改成功）：{result_dict["cgeb"]}
-⚠️ 錯誤（原二级密码错误）：{result_dict["sbeb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}</b>
+检测数量: {len(folder_names)}
+存活数量: {result_dict['alive']}
+死号数量：{result_dict['dead']}
+修改成功: {result_dict['cgeb']}
+修改失败: {result_dict['sbeb']}
             '''
-    await context.bot.send_message(chat_id=user_id, text=fstext, parse_mode='HTML')
+    await context.bot.send_message(chat_id=user_id, text=fstext)
 
     folder_names = kepro
     xianswb = []
@@ -1368,7 +1198,7 @@ async def qrxxygeb(update: Update, context: CallbackContext):
     
     if result_dict['cgeb'] != 0:
         shijiancuo = int(time.time())
-        zip_filename = f"更改二步tdata/Session 修改成功2FA - {len(folder_names)}.zip"
+        zip_filename = f"更改二步tdata/{user_id}_{shijiancuo}.zip"
         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
             # 将每个文件及其内容添加到 zip 文件中
             for file_name in folder_names:
@@ -1384,7 +1214,7 @@ async def qrxxygeb(update: Update, context: CallbackContext):
 
     if result_dict['sbeb'] != 0:
         shijiancuo = int(time.time())
-        zip_filename = f"更改二步tdata/Session 修改失败2FA - {len(sbpro)}.zip"
+        zip_filename = f"更改二步tdata/{user_id}_{shijiancuo}失败.zip"
         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
             # 将每个文件及其内容添加到 zip 文件中
             for file_name in sbpro:
@@ -1399,22 +1229,6 @@ async def qrxxygeb(update: Update, context: CallbackContext):
 
         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
     
-    if result_dict['dead'] != 0:
-        shijiancuo = int(time.time())
-        zip_filename = f"更改二步tdata/Session 封禁死亡 - {len(sbpro)}.zip"
-        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-            # 将每个文件及其内容添加到 zip 文件中
-            for file_name in fenjin:
-                # 检查是否存在以 .json 或 .session 结尾的文件
-                json_file_path = os.path.join(f"./更改二步tdata/", file_name + ".json")
-                session_file_path = os.path.join(f"./更改二步tdata/", file_name + ".session")
-                if os.path.exists(json_file_path):
-                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                if os.path.exists(session_file_path):
-                    zipf.write(session_file_path, os.path.basename(session_file_path))
-
-
-        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
     
     
 async def qrxgeb(update: Update, context: CallbackContext):
@@ -1425,26 +1239,27 @@ async def qrxgeb(update: Update, context: CallbackContext):
     data = query.data.replace("qrxgeb ", '').split(':')
     jeb = data[0]
     xeb = data[1]
-    gg_list = len(context.user_data[f'zdgeb{user_id}'])
-    message_id = await context.bot.send_message(chat_id=user_id, text='<b>💫正在批量修改中，请等待···</b>', parse_mode='HTML')
+    gg_list = context.user_data[f'zdgeb{user_id}']
+    message_id = await context.bot.send_message(chat_id=user_id, text='更改中')
     folder_names = []
     for i in gg_list:
         folder_names.append(i)
     kepro = []
     sbpro = []
-    fenjin = []
     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-    result_dict = {'alive': 0, 'dead': 0, 'cgeb': 0, 'sbeb': 0, 'wxy': 0}
+    result_dict = {'alive': 0, 'dead': 0, 'cgeb': 0, 'sbeb': 0}
     await asyncio.gather(
-        *(plgaierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb,xeb, kepro, sbpro, fenjin) for subfolder in
+        *(plgaierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb,xeb, kepro, sbpro) for subfolder in
           folder_names))
 
     fstext = f'''
-<b>✅ 成功（修改成功）：{result_dict["cgeb"]}
-⚠️ 錯誤（原二级密码错误）：{result_dict["sbeb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}</b>
+检测数量: {len(folder_names)}
+存活数量: {result_dict['alive']}
+死号数量：{result_dict['dead']}
+修改成功: {result_dict['cgeb']}
+修改失败: {result_dict['sbeb']}
             '''
-    await context.bot.send_message(chat_id=user_id, text=fstext, parse_mode='HTML')
+    await context.bot.send_message(chat_id=user_id, text=fstext)
 
     folder_names = kepro
     xianswb = []
@@ -1456,7 +1271,7 @@ async def qrxgeb(update: Update, context: CallbackContext):
     if result_dict['cgeb'] != 0:
 
         shijiancuo = int(time.time())
-        zip_filename = f"./二步号包/Tdata修改成功2FA - {len(folder_names)}.zip"
+        zip_filename = f"./二步号包/{user_id}_{shijiancuo}.zip"
         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
             # 将每个文件夹及其内容添加到 zip 文件中
             for folder_name in folder_names:
@@ -1478,7 +1293,7 @@ async def qrxgeb(update: Update, context: CallbackContext):
     if result_dict['sbeb'] != 0:
 
         shijiancuo = int(time.time())
-        zip_filename = f"./二步号包/Tdata修改失败2FA - {len(sbpro)}.zip"
+        zip_filename = f"./二步号包/{user_id}_{shijiancuo}失败.zip"
         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
             # 将每个文件夹及其内容添加到 zip 文件中
             for folder_name in sbpro:
@@ -1497,28 +1312,6 @@ async def qrxgeb(update: Update, context: CallbackContext):
 
         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
         
-        
-    if result_dict['dead'] != 0:
-
-        shijiancuo = int(time.time())
-        zip_filename = f"./二步号包/Tdata封禁死亡 - {len(fenjin)}.zip"
-        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-            # 将每个文件夹及其内容添加到 zip 文件中
-            for folder_name in fenjin:
-                full_folder_path = os.path.join(f"./更改二步tdata/", folder_name)
-                if os.path.exists(full_folder_path):
-                    # 添加文件夹及其内容
-                    for root, dirs, files in os.walk(full_folder_path):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                            zipf.write(file_path,
-                                       os.path.join(folder_name, os.path.relpath(file_path, full_folder_path)))
-                else:
-                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                    pass
-
-        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
         
 
 async def xytcqtsb(update: Update, context: CallbackContext):
@@ -1609,9 +1402,7 @@ async def zdjcch(update: Update, context: CallbackContext):
     await query.answer()
     bot_id = context.bot.id
     fstext = f'''
-🔥檢查Tdata存活情況
-🗂请发送压缩包zip格式
-⚠️请不要发送超过10000个账号
+发送直登号包, 检测存活
     '''
     user.update_one({"user_id": user_id}, {"$set": {"sign": f'zdjcch'}})
     keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
@@ -1717,8 +1508,19 @@ async def ggaiwezi(update: Update, context: CallbackContext):
     user.update_one({"user_id": user_id}, {"$set": {"sign": f'ggaiwezi'}})
     keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
     await context.bot.send_message(chat_id=user_id, text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
-    
-    
+
+
+async def xieyicaifen(update: Update, context: CallbackContext):
+    query = update.callback_query
+    user_id = query.from_user.id
+    await query.answer()
+    bot_id = context.bot.id
+    fstext = f'''
+发送压缩包
+    '''
+    user.update_one({"user_id": user_id}, {"$set": {"sign": f'xieyicaifen'}})
+    keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
+    await context.bot.send_message(chat_id=user_id, text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
     
 async def ysbcf(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -1729,6 +1531,22 @@ async def ysbcf(update: Update, context: CallbackContext):
 发送压缩包
     '''
     user.update_one({"user_id": user_id}, {"$set": {"sign": f'ysbcf'}})
+    keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
+    await context.bot.send_message(chat_id=user_id, text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def zdxyfen(update: Update, context: CallbackContext):
+    query = update.callback_query
+    user_id = query.from_user.id
+    await query.answer()
+    hbsl = query.data.replace('zdxyfen ','')
+    bot_id = context.bot.id
+    fstext = f'''
+输入指定要分割的数量，不能超过号包数量
+空格分割
+100 200 300 400 
+    '''
+    user.update_one({'user_id': user_id},{"$set":{"sign": f'zdxyfen {hbsl}'}})
+    
     keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
     await context.bot.send_message(chat_id=user_id, text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -1764,6 +1582,22 @@ async def dewbfen(update: Update, context: CallbackContext):
     await context.bot.send_message(chat_id=user_id, text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
+async def dexyfen(update: Update, context: CallbackContext):
+    query = update.callback_query
+    user_id = query.from_user.id
+    await query.answer()
+    projectname = query.data.replace('dexyfen ','')
+    bot_id = context.bot.id
+    fstext = f'''
+输入需要分割的包数
+    '''
+    user.update_one({'user_id': user_id},{"$set":{"sign": f'dexywbshu {projectname}'}})
+    
+    keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
+    await context.bot.send_message(chat_id=user_id, text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
+    
+    
+    
 async def decaifen(update: Update, context: CallbackContext):
     query = update.callback_query
     user_id = query.from_user.id
@@ -1916,45 +1750,6 @@ def copy_file(source_path, destination_path):
     except subprocess.CalledProcessError as e:
         print(f"Error: {str(e)}")
 
-
-async def clqfclo(update: Update, context: CallbackContext):
-    query = update.callback_query
-    chat = query.message.chat
-    await query.answer()
-    cxid = query.data.replace('clqfclo ', '')
-    bot_id = context.bot.id
-    chat_id = chat.id
-    user_id = query.from_user.id
-    fullname = query.from_user.full_name
-    username = query.from_user.username
-    timer = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-    qfck.insert_one({
-        'cxid': cxid,
-        'user_id': user_id,
-        'fullname': fullname,
-        'username': username,
-        'timer': timer
-    })
-    user.update_one({'user_id': user_id}, {'$set': {'sign': 0}})
-    await context.bot.delete_message(chat_id=query.from_user.id, message_id=query.message.message_id)
-
-async def qunfagg(context: CallbackContext):
-    bot_id = context.bot.id
-    qfid = context.job.data['qfid']
-    fstext = context.job.data['fstext']
-    cxid = context.job.data['cxid']
-    user_id = context.job.data['user_id']
-
-    for i in user.find({}):
-        yh_id = i['user_id']
-        keyboard = [[InlineKeyboardButton(' ✅已读', callback_data=f'clqfclo {cxid}')]]
-        try:
-            await context.bot.send_message(chat_id=i['user_id'], text=fstext, reply_markup=InlineKeyboardMarkup(keyboard))
-        except:
-            pass
-        await asyncio.sleep(3)
-    await context.bot.send_message(chat_id=user_id, text='广告发送完成')
-
 async def textkeyboard(update: Update, context: CallbackContext):
     chat = update.effective_chat
     if chat.type == 'private':
@@ -1972,87 +1767,41 @@ async def textkeyboard(update: Update, context: CallbackContext):
         sign = user_list['sign']
         USDT = user_list['USDT']
         text = update.message.text
-        ptgrade = user_list['ptgrade']
-        if ptgrade == '新用户':
-            timer = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-            now = datetime.now()
-            Expiration = (now + timedelta(hours=6)).strftime(f"%Y-%m-%d %H:{timer[-5:]}")
-            user.update_one({'user_id': user_id}, {"$set": {"Expiration": Expiration}})
-            user.update_one({'user_id': user_id}, {"$set": {"ptgrade": '一般用户'}})
-            await context.bot.send_message(chat_id=user_id,text=f'<b>机器人试用权截止: {Expiration}</b>', parse_mode='HTML')
-        else:
-            timer = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-            Expiration = user_list['Expiration']
-            if timer >= Expiration:
-                await context.bot.send_message(chat_id=user_id,text=f'<b>已到期,联系管理员开卡</b>', parse_mode='HTML')
-                return
-        
-        chinese_buttons = [
-            '添加json',
-            '更改文字',
-            '过滤-',
-            'Tdata踢出其他设备',
-            'Session踢出其他设备',
-            'Tdata修改二级密码',
-            'Session修改二级密码',
-            '协议划分国家',
-            '添加二步验证文本',
-            '协议采集频道',
-            '协议分析链接',
-            'Tdata（直登）修改姓名',
-            'Session（协议）修改姓名',
-            'Tdata（直登）修改简介',
-            'Session（协议）修改简介',
-            'Tdata重置2FA',
-            'Session重置2FA',
-            'Tdata（直登）关注频道',
-            'Session（协议）关注频道',
-            '压缩包拆分',
-            '文本文件拆分',
-            '检查Tdata双向',
-            '检查Session双向',
-            '检查Tdata（直登）',
-            '检查Session（协议）',
-            'Tdata 转换session',
-            'Session 转换Tdata'
-        ]
-
-        if text in chinese_buttons:
-            xgsign = keyboard_dict[text]
-            
-            fstext = hf_json[xgsign]
-            fstext = fstext.replace(fstext, f'<b>{fstext}</b>')
-            
-            await context.bot.send_message(chat_id=user_id,text=fstext, parse_mode='HTML')
-            user.update_one({'user_id': user_id},{"$set":{"sign": xgsign}})
-        
-            return
         if sign != 0:
             if update.message.text:
 
                 if sign == 'seteb':
-                    message_id = await context.bot.send_message(chat_id=user_id, text='👉请发送要修改的二级密码')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='发送新二步')
                     user.update_one({'user_id': user_id}, {"$set": {'sign': f'xineb {text}'}})
                 
                 elif sign == 'xyseteb':
-                    message_id = await context.bot.send_message(chat_id=user_id, text='👉请发送要修改的二级密码')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='发送新二步')
                     user.update_one({'user_id': user_id}, {"$set": {'sign': f'xyxineb {text}'}})
                 
-                elif 'fbgg' in sign:
-                    qfid = sign.replace('fbgg ', '')
+                    
+                elif sign == 'addjsontext':
+                    cp_json_path = os.path.join('cp.json')
+                    
+                    
+                    # 读取原始的 cp.json 文件
+                    with open(cp_json_path, 'r', encoding='utf-8') as cp_file:
+                        cp_data = json.load(cp_file)
+                    
+                    cp_data['twoFA'] = update.message.text
+                    
 
-                    fstext = context.user_data[f'{qfid}']
-
-                    await context.bot.send_message(chat_id=user_id, text=f'开始发送广告, 查询ID为: <b>{text}</b>',
-                                             parse_mode='HTML')
-
-                    user.update_one({'user_id': user_id}, {"$set": {'sign': 0}})
-                    context.job_queue.run_once(qunfagg, 1, data={'qfid': qfid, 'fstext': fstext, 'cxid': text,
-                                                                    'user_id': user_id})
+                    # 将修改后的数据写入新的 JSON 文件
+                    with open('cp.json', 'w', encoding='utf-8') as new_cp_file:
+                        json.dump(cp_data, new_cp_file, ensure_ascii=False, indent=4)
                     
                     
+                    fstext = f'''
+发送协议号包
+                    '''
                     
+                    message_id = await context.bot.send_message(chat_id=user_id, text=fstext)
                     
+                    user.update_one({'user_id': user_id}, {"$set": {'sign': f'addjson'}})
                 elif sign == 'srthwenzi':
                     
                     folder_names = context.user_data['ggaiwezi']  
@@ -2096,32 +1845,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     folder_names = []
                     for i in gzpd_list:
                         folder_names.append(i['phone'])
-                    
-                    
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
-                    
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    sblist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'sb': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     
                     await asyncio.gather(
-                        *(xygzpd('检测协议号', subfolder, semaphore, result_dict, kepro, fenjin, gzlb, sblist) for subfolder in
+                        *(xygzpd('检测协议号', subfolder, semaphore, result_dict, kepro, fenjin, gzlb) for subfolder in
                           folder_names))
                     
                     fstext = f'''
-✅ 成功（修改成功）：{result_dict["alive"]}
-⚠️ 錯誤（修改失败）：{result_dict["sb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
                     '''
                     await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"检测协议号/Session成功关注 - {len(kepro)}.zip"
+                        zip_filename = f"检测协议号/成功关注（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for file_name in kepro:
@@ -2135,25 +1881,9 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                      
-                    if len(sblist) != 0:
-                        zip_filename = f"检测协议号/Session修改失败 - {len(sblist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for file_name in sblist:
-                                # 检查是否存在以 .json 或 .session 结尾的文件
-                                json_file_path = os.path.join(f"./检测协议号/", file_name + ".json")
-                                session_file_path = os.path.join(f"./检测协议号/", file_name + ".session")
-                                if os.path.exists(json_file_path):
-                                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                                if os.path.exists(session_file_path):
-                                    zipf.write(session_file_path, os.path.basename(session_file_path))
-    
-                    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                         
                     if len(fenjin) != 0:
-                        zip_filename = f"检测协议号/Session封禁死亡 - {len(fenjin)}.zip"
+                        zip_filename = f"检测协议号/死号（{len(fenjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for file_name in fenjin:
@@ -2172,7 +1902,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
 
                     gzpd.drop({})
                     folder_to_clear = './检测协议号'
-                    
+                    clear_folder(folder_to_clear)
                     
                 elif sign == 'caijipd':
                     mingzi = text.split(':')
@@ -2225,31 +1955,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     folder_names = []
                     for i in gzpd_list:
                         folder_names.append(i['phone'])
-                        
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
-                        
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    sblist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'sb': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     await asyncio.gather(
-                        *(xyxgjianjie('检测协议号', subfolder, semaphore, result_dict, kepro, fenjin, mingzi, sblist) for subfolder in
+                        *(xyxgjianjie('检测协议号', subfolder, semaphore, result_dict, kepro, fenjin, mingzi) for subfolder in
                           folder_names))
                     
                     
                     fstext = f'''
-✅ 成功（修改成功）：{result_dict["alive"]}
-⚠️ 錯誤（修改失败）：{result_dict["sb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
                     '''
                     await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"检测协议号/Session修改成功简介 - {len(kepro)}.zip"
+                        zip_filename = f"检测协议号/成功修改（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in kepro:
@@ -2267,31 +1995,9 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     pass
                     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                     
-                     
-                    if len(sblist) != 0:
-                        zip_filename = f"检测协议号/Session修改失败简介 - {len(sblist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in sblist:
-                                full_folder_path = os.path.join(f"./检测协议号/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                         
                     if len(fenjin) != 0:
-                        zip_filename = f"检测协议号/Session封禁死亡 - {len(fenjin)}.zip"
+                        zip_filename = f"检测协议号/死号（{len(fenjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in fenjin:
@@ -2314,7 +2020,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
 
                     xgmz.drop({})
                     folder_to_clear = './检测协议号'
-                    
+                    clear_folder(folder_to_clear)
                 
                 elif sign == 'zdgjj':
                     mingzi = text
@@ -2324,30 +2030,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     folder_names = []
                     for i in gzpd_list:
                         folder_names.append(i['phone'])
-                        
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    sblist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'sb': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     await asyncio.gather(
-                        *(zdxgjianjie('检测号包', subfolder, semaphore, result_dict, kepro, fenjin, mingzi, sblist) for subfolder in
+                        *(zdxgjianjie('检测号包', subfolder, semaphore, result_dict, kepro, fenjin, mingzi) for subfolder in
                           folder_names))
                     
                     
                     fstext = f'''
-✅ 成功（修改成功）：{result_dict["alive"]}
-⚠️ 錯誤（修改失败）：{result_dict["sb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
                     '''
                     await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"检测号包/Tdata修改成功简介 - {len(kepro)}.zip"
+                        zip_filename = f"检测号包/成功修改（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in kepro:
@@ -2366,29 +2071,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                         
-                    if len(sblist) != 0:
-                        zip_filename = f"检测号包/Tdata修改失败简介 - {len(sblist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in sblist:
-                                full_folder_path = os.path.join(f"./检测号包/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-                    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                        
                     if len(fenjin) != 0:
-                        zip_filename = f"检测号包/Tdata封禁死亡 - {len(fenjin)}.zip"
+                        zip_filename = f"检测号包/死号（{len(fenjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in fenjin:
@@ -2411,7 +2095,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
 
                     xgmz.drop({})
                     folder_to_clear = './检测号包'
-                    
+                    clear_folder(folder_to_clear)
                     
                 
                 elif sign == 'xygname':
@@ -2424,31 +2108,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     folder_names = []
                     for i in gzpd_list:
                         folder_names.append(i['phone'])
-                        
-                        
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    sblist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'sb': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     await asyncio.gather(
-                        *(xyxgmzi('检测协议号', subfolder, semaphore, result_dict, kepro, fenjin, mingzi, sblist) for subfolder in
+                        *(xyxgmzi('检测协议号', subfolder, semaphore, result_dict, kepro, fenjin, mingzi) for subfolder in
                           folder_names))
                     
                     
                     fstext = f'''
-✅ 成功（修改成功）：{result_dict["alive"]}
-⚠️ 錯誤（修改失败）：{result_dict["sb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
                     '''
                     await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"检测协议号/Session修改成功名字 - {len(kepro)}.zip"
+                        zip_filename = f"检测协议号/成功修改（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in kepro:
@@ -2467,31 +2149,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                         
-                        
-                    if len(sblist) != 0:
-                        zip_filename = f"检测协议号/Session修改失败名字 - {len(sblist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in sblist:
-                                full_folder_path = os.path.join(f"./检测协议号/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                        
                     if len(fenjin) != 0:
-                        zip_filename = f"检测协议号/Session封禁死亡 - {len(fenjin)}.zip"
+                        zip_filename = f"检测协议号/死号（{len(fenjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in fenjin:
@@ -2514,7 +2173,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
 
                     xgmz.drop({})
                     folder_to_clear = './检测协议号'
-                    
+                    clear_folder(folder_to_clear)
                     
                 elif sign == 'zdgwzname':
                     mingzi = text
@@ -2524,33 +2183,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     folder_names = []
                     for i in gzpd_list:
                         folder_names.append(i['phone'])
-                        
-                        
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
-                        
-                        
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    sblist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'sb': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     await asyncio.gather(
-                        *(zdxgmzi('检测号包', subfolder, semaphore, result_dict, kepro, fenjin, mingzi, sblist) for subfolder in
+                        *(zdxgmzi('检测号包', subfolder, semaphore, result_dict, kepro, fenjin, mingzi) for subfolder in
                           folder_names))
                     
                     
                     fstext = f'''
-✅ 成功（修改成功）：{result_dict["alive"]}
-⚠️ 錯誤（修改失败）：{result_dict["sb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
                     '''
                     await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"检测号包/Tdata修改成功名字 - {len(kepro)}.zip"
+                        zip_filename = f"检测号包/成功修改（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in kepro:
@@ -2569,31 +2224,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                         
-                        
-                    if len(sblist) != 0:
-                        zip_filename = f"检测号包/Tdata修改失败 - {len(sblist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in sblist:
-                                full_folder_path = os.path.join(f"./检测号包/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                        
                     if len(fenjin) != 0:
-                        zip_filename = f"检测号包/Tdata封禁死亡 - {len(fenjin)}.zip"
+                        zip_filename = f"检测号包/死号（{len(fenjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in fenjin:
@@ -2614,12 +2246,9 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
 
-
-
-
                     xgmz.drop({})
                     folder_to_clear = './检测号包'
-                    
+                    clear_folder(folder_to_clear)
                 
                 elif sign == 'zdzpdjqr':
                     gzlb = text.split(' ')
@@ -2629,31 +2258,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     folder_names = []
                     for i in gzpd_list:
                         folder_names.append(i['phone'])
-                        
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
-                        
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    sblist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'sb': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     await asyncio.gather(
-                        *(zdgzpd('检测号包', subfolder, semaphore, result_dict, kepro, fenjin, gzlb, sblist) for subfolder in
+                        *(zdgzpd('检测号包', subfolder, semaphore, result_dict, kepro, fenjin, gzlb) for subfolder in
                           folder_names))
                     
                     
                     fstext = f'''
-✅ 成功（修改成功）：{result_dict["alive"]}
-⚠️ 錯誤（修改失败）：{result_dict["sb"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
                     '''
                     await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"检测号包/Tdata成功关注 - {len(kepro)}.zip"
+                        zip_filename = f"检测号包/成功关注（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in kepro:
@@ -2672,32 +2299,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                         
-                        
-                    if len(sblist) != 0:
-                        zip_filename = f"检测号包/Tdata修改失败 - {len(sblist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in sblist:
-                                full_folder_path = os.path.join(f"./检测号包/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                        
-                        
                     if len(fenjin) != 0:
-                        zip_filename = f"检测号包/Tdata封禁死亡 - {len(fenjin)}.zip"
+                        zip_filename = f"检测号包/死号（{len(fenjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in fenjin:
@@ -2720,9 +2323,43 @@ async def textkeyboard(update: Update, context: CallbackContext):
 
                     gzpd.drop({})
                     folder_to_clear = './检测号包'
+                    clear_folder(folder_to_clear)
                     
+                elif 'zdxyfen' in sign:
+                    hbsl = int(sign.replace("zdxyfen ",''))
                     
+                    fgsl = text.split(' ')
+                    fgsum = 0
+                    for i in fgsl:
+                        fgsum += int(i)
+                        
+                    if fgsum > hbsl:
+                        message_id = await context.bot.send_message(chat_id=user_id, text='指定的数量，超过号包数')
+                        return
                     
+                    await context.bot.send_message(chat_id=user_id, text='开始拆分')
+                    
+                    total_folders = context.user_data['xieyicaifen']
+                    count = 0
+                    for i in fgsl:
+                        part_name = f"part_{i}.zip"
+
+                        with zipfile.ZipFile(part_name, "w", zipfile.ZIP_DEFLATED) as part_zipf:
+                            
+                            # 将每个文件及其内容添加到 zip 文件中
+                            for j in range(int(i)):
+                                folder_name = total_folders[count]
+                                count+=1
+                                # 检查是否存在以 .json 或 .session 结尾的文件
+                                json_file_path = os.path.join(f"./检测协议号/", folder_name + ".json")
+                                session_file_path = os.path.join(f"./检测协议号/", folder_name + ".session")
+                                if os.path.exists(json_file_path):
+                                    part_zipf.write(json_file_path, os.path.basename(json_file_path))
+                                if os.path.exists(session_file_path):
+                                    part_zipf.write(session_file_path, os.path.basename(session_file_path))
+                        
+                        
+                        await context.bot.send_document(update.effective_chat.id, open(part_name, 'rb'))
                     
                 elif 'zdcaifen' in sign:
                     hbsl = int(sign.replace("zdcaifen ",''))
@@ -2772,7 +2409,9 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     user.update_one({'user_id': user_id},{"$set":{'sign': 0}})
                 elif 'xyxineb' in sign:
                     jeb = sign.replace('xyxineb ', '')
+                    
                     gghlen = len(context.user_data[f'xygeb{user_id}'])
+
                     fstext = f'''
 待更改号数: {gghlen}
 旧二步: {jeb}
@@ -2829,7 +2468,43 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         
                         await context.bot.send_document(update.effective_chat.id, open(part_name, 'rb'))
                     
+                elif 'dexywbshu' in sign:
                     
+                    await context.bot.send_message(chat_id=user_id, text='开始拆分')
+                    split_count = int(text)
+                    
+                    total_folders = context.user_data['xieyicaifen']
+
+                    folders_per_part = len(total_folders) // split_count
+                    
+                    for i in range(split_count):
+                        part_name = f"part_{i+1}.zip"
+                        start_index = i * folders_per_part
+                        end_index = (i + 1) * folders_per_part
+                        
+
+                        with zipfile.ZipFile(part_name, "w", zipfile.ZIP_DEFLATED) as part_zipf:
+                            
+                            # 将每个文件及其内容添加到 zip 文件中
+                            for j in range(start_index, end_index):
+                                folder_name = total_folders[j]
+                                # 检查是否存在以 .json 或 .session 结尾的文件
+                                json_file_path = os.path.join(f"./检测协议号/", folder_name + ".json")
+                                session_file_path = os.path.join(f"./检测协议号/", folder_name + ".session")
+                                if os.path.exists(json_file_path):
+                                    part_zipf.write(json_file_path, os.path.basename(json_file_path))
+                                if os.path.exists(session_file_path):
+                                    part_zipf.write(session_file_path, os.path.basename(session_file_path))
+                        
+                        
+                        await context.bot.send_document(update.effective_chat.id, open(part_name, 'rb'))
+                        
+
+                        
+                        
+                        
+                    user.update_one({'user_id': user_id},{"$set":{'sign': 0}})
+                
                 elif 'dewbshu' in sign:
                     
                     await context.bot.send_message(chat_id=user_id, text='开始拆分')
@@ -2903,8 +2578,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     
                     
                     context.user_data[f'zdgeb{user_id}'] = phone_list
-
-                    message_id = await context.bot.send_message(chat_id=user_id, text='👇请发送当前的二级密码，如果没有，请发“无”')
+                    
+                    message_id = await context.bot.send_message(chat_id=user_id, text='发送旧二级，没有二级发无')
 
                     user.update_one({'user_id': user_id}, {"$set": {'sign': 'seteb'}})
                 
@@ -2943,7 +2618,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 pass
                     context.user_data[f'xygeb{user_id}'] = phone_list
                             
-                    message_id = await context.bot.send_message(chat_id=user_id, text='👇请发送当前的二级密码，如果没有，请发“无”')
+                            
+                    message_id = await context.bot.send_message(chat_id=user_id, text='发送旧二级，没有二级发无')
 
                     user.update_one({'user_id': user_id}, {"$set": {'sign': 'xyseteb'}})
                 
@@ -3035,7 +2711,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     await context.bot.send_document(chat_id=user_id, document=open('output_jsons.zip', "rb"))
 
                     folder_to_clear = 'output_jsons'
-                    
+                    clear_folder(folder_to_clear)
                     
                 elif sign == 'xyhfgj':
                     caption = update.message.caption
@@ -3073,13 +2749,20 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     area_code_files = defaultdict(list)
                     
                     # 匹配区号的正则表达式
-                    pattern = re.compile(r"(\+?\d+)(?=\d{10})")
+                    pattern = re.compile(r"(\+?\d{2})\d{8,}")
                     
                     for filename in session_files:
-                        match = pattern.match(filename)
-                        if match:
-                            area_code = match.group(1)
-                            area_code_files[area_code].append(filename)
+                        filename1 = filename
+                        filename = filename.replace('+', '')
+                        
+                        if filename[0] == '1' or filename[0:2] == '+1':
+                            area_code_files['+1'].append(filename)
+                        else:
+                            match = pattern.match(filename)
+                            if match:
+                                # 提取前两位
+                                area_code = match.group(1)
+                                area_code_files[area_code].append(filename1)
                     
                     # 打印结果
                     for area_code, files in area_code_files.items():
@@ -3101,7 +2784,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         
                         time.sleep(3)
                     folder_to_clear = './sesstotdata'
-                    
+                    clear_folder(folder_to_clear)
                     
                 
                 elif sign == 'xygjj':
@@ -3470,7 +3153,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     })
                             zip_ref.extract(file_info, f'检测号包/')
                     fstext = f'''
-请发送您要修改的名字（例如：TG号批发xx）
+发送要修改的名字
                     '''
                     
                     user.update_one({'user_id': user_id}, {"$set": {"sign": 'zdgwzname'}})
@@ -3546,7 +3229,49 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     user.update_one({'user_id': user_id}, {"$set": {"sign": 'srthwenzi'}})
                     keyboard = [[InlineKeyboardButton('取消', callback_data=f'close {user_id}')]]
                     await context.bot.send_message(chat_id=user_id,text=fstext,reply_markup=InlineKeyboardMarkup(keyboard))
-                   
+                  
+                  
+                  
+                elif sign =='xieyicaifen':
+                    caption = update.message.caption
+                    file = update.message.document
+                    # 获取文件名
+                    filename = file.file_name
+
+                    # 获取文件ID
+                    file_id = file.file_id
+                    new_file = await context.bot.get_file(file_id)
+                    # 将文件保存到本地
+                    new_file_path = f'./tdatatosession/{filename}'
+                    await new_file.download(new_file_path)
+                    tj_dict = {}
+                    folder_names = []
+                    phone_dict = {}
+                    
+                    with zipfile.ZipFile(new_file_path, 'r') as zip_ref:
+                        for file_info in zip_ref.infolist():
+                            filename = file_info.filename
+                            if filename.endswith('.json') or filename.endswith('.session'):
+                                # 仅解压 session 或者 json 格式的文件
+                                fli1 = filename.replace('.json', '').replace('.session', '')
+                                if fli1 not in phone_dict.keys():
+                                    phone_dict[fli1] = 1
+                                    folder_names.append(fli1)
+                                        
+                                zip_ref.extract(member=file_info, path=f'检测协议号/')
+                            else:
+                                pass
+                    context.user_data['xieyicaifen'] = folder_names        
+                    fstext = f'''
+共{len(folder_names)}个号
+                    '''
+                    keyboard = [
+                        [InlineKeyboardButton('等额拆分', callback_data=f'dexyfen {filename}'), InlineKeyboardButton('指定拆分', callback_data=f'zdxyfen {len(folder_names)}')]    
+                    ]
+                    user.update_one({'user_id': user_id}, {"$set": {"sign": 0}})
+                    
+                    await context.bot.send_message(chat_id=user_id,text=fstext,reply_markup=InlineKeyboardMarkup(keyboard))
+                  
                 elif sign == 'ysbcf':
                     caption = update.message.caption
                     file = update.message.document
@@ -3656,7 +3381,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     user.update_one({'user_id': user_id}, {"$set": {"sign": 0}})
                     await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     folder_to_clear = './下载专用'
-                    
+                    clear_folder(folder_to_clear)
 
             
                 elif sign == 'xyjcsx':
@@ -3686,30 +3411,31 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 zip_ref.extract(member=file_info, path=f'sesstotdata/')
                             else:
                                 pass
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='协议号检测双向中，请稍后')
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    wxylist = []
-                    kylist = []
-                    bkylist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     await asyncio.gather(
-                        *(xyshaungxiang('sesstotdata', subfolder, semaphore, result_dict, kepro, sxjin, wxylist,kylist,bkylist) for subfolder in folder_names))
+                        *(xyshaungxiang('sesstotdata', subfolder, semaphore, result_dict, kepro, sxjin) for subfolder in folder_names))
 
                     fstext = f'''
-<b>✅ 成功（正常且无双向）：{result_dict["zc"]}
-🫢 双向（双向限制）：{result_dict["sx"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
-⚠️ 錯誤（服务器未响应）：{result_dict["wxy"]}</b>
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+
+正常: {result_dict['zc']}
+双向: {result_dict['sx']}
                     '''
-                    await context.bot.send_message(chat_id=user_id, text=fstext, parse_mode='HTML')
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"sesstotdata/session检测 -正常- {len(kepro)}.zip"
+                        zip_filename = f"sesstotdata/自由小鸟（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for file_name in kepro:
@@ -3724,7 +3450,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
                     if len(sxjin) != 0:
-                        zip_filename = f"sesstotdata/session检测 -双向- {len(sxjin)}.zip"
+                        zip_filename = f"sesstotdata/双向（{len(sxjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for file_name in sxjin:
@@ -3739,40 +3465,10 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
-                    if len(bkylist) != 0:
-                        zip_filename = f"sesstotdata/session检测 -无效- {len(bkylist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for file_name in bkylist:
-                                # 检查是否存在以 .json 或 .session 结尾的文件
-                                json_file_path = os.path.join(f"./sesstotdata/", file_name + ".json")
-                                session_file_path = os.path.join(f"./sesstotdata/", file_name + ".session")
-                                if os.path.exists(json_file_path):
-                                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                                if os.path.exists(session_file_path):
-                                    zipf.write(session_file_path, os.path.basename(session_file_path))
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                    
-                    if len(wxylist) != 0:
-                        zip_filename = f"sesstotdata/session检测 -错误- {len(wxylist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for file_name in wxylist:
-                                # 检查是否存在以 .json 或 .session 结尾的文件
-                                json_file_path = os.path.join(f"./sesstotdata/", file_name + ".json")
-                                session_file_path = os.path.join(f"./sesstotdata/", file_name + ".session")
-                                if os.path.exists(json_file_path):
-                                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                                if os.path.exists(session_file_path):
-                                    zipf.write(session_file_path, os.path.basename(session_file_path))
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
+
                     
                     folder_to_clear = './sesstotdata'
-                    
+                    clear_folder(folder_to_clear)
 
 
                 elif sign == 'jcshuax':
@@ -3801,31 +3497,33 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     folder_names.append(extracted_folder_name)
                             zip_ref.extract(file_info, f'tdatatosession/')
 
-                    await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如无反应！请联系技术支持！</b>', parse_mode='HTML')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='直登号检测双向中，请稍后')
 
                     kepro = []
                     fenjin = []
                     sxjin = []
-                    wxylist = []
-                    bkylist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'zc': 0, 'fk': 0, 'sx': 0}
                     await asyncio.gather(
-                        *(zdshuangxiang('tdatatosession', subfolder, semaphore, result_dict, kepro, sxjin, wxylist, bkylist) for subfolder in
+                        *(zdshuangxiang('tdatatosession', subfolder, semaphore, result_dict, kepro, sxjin) for subfolder in
                           folder_names))
 
                     fstext = f'''
-<b>✅ 成功（正常且无双向）：{result_dict["zc"]}
-🫢  双向（双向限制）：{result_dict["sx"]}
-❌ 無效（多ip，封禁）：{result_dict["dead"]}
-⚠️ 錯誤（服务器未响应）：{result_dict["wxy"]}</b>
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+
+正常: {result_dict['zc']}
+双向: {result_dict['sx']}
                     '''
-                    await context.bot.send_message(chat_id=user_id, text=fstext, parse_mode='HTML')
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
  
                     shijiancuo = int(time.time())
                     if len(kepro) != 0:
-                        zip_filename = f"tdatatosession/Tdata检测 -正常- {len(kepro)}.zip"
+                        zip_filename = f"tdatatosession/自由小鸟（{len(kepro)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in kepro:
@@ -3845,7 +3543,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
                     if len(sxjin) != 0:
-                        zip_filename = f"tdatatosession/Tdata检测 -双向- {len(sxjin)}.zip"
+                        zip_filename = f"tdatatosession/双向（{len(sxjin)}）.zip"
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
                             for folder_name in sxjin:
@@ -3865,50 +3563,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     
-                    if len(bkylist) != 0:
-                        zip_filename = f"tdatatosession/Tdata检测 -无效- {len(bkylist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in bkylist:
-                                full_folder_path = os.path.join(f"./tdatatosession/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                    
-                    if len(wxylist) != 0:
-                        zip_filename = f"tdatatosession/Tdata检测 -错误- {len(wxylist)}.zip"
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in wxylist:
-                                full_folder_path = os.path.join(f"./tdatatosession/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                    
                     folder_to_clear = './tdatatosession'
-                    
+                    clear_folder(folder_to_clear)
 
 
                 elif sign == 'tdatatosession':
@@ -3937,27 +3593,28 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     folder_names.append(extracted_folder_name)
                             zip_ref.extract(file_info, f'tdatatosession/')
 
-                    message_id = await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持</b>', parse_mode='HTML')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='tdata to session中，请稍后')
 
                     kepro = []
-                    wxylist = []
                     fenjin = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0}
                     await asyncio.gather(
-                        *(zhidengzhuan('tdatatosession', subfolder, semaphore, result_dict, kepro, fenjin, wxylist) for subfolder in
+                        *(zhidengzhuan('tdatatosession', subfolder, semaphore, result_dict, kepro, fenjin) for subfolder in
                           folder_names))
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
-'''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+                                        '''
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
  
                     shijiancuo = int(time.time())
-                    zip_filename = f"tdatatosession/Tdata转换session -存活- {len(kepro)}.zip"
+                    zip_filename = f"tdatatosession/健康（{len(kepro)}）.zip"
                     if len(kepro) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -3972,7 +3629,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
-                    zip_filename = f"tdatatosession/Tdata转换session -无效- {len(fenjin)}.zip"
+                    zip_filename = f"tdatatosession/封禁（{len(fenjin)}）.zip"
                     if len(fenjin) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -3992,31 +3649,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                    zip_filename = f"tdatatosession/Tdata转换session -错误- {len(wxylist)}.zip"
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in wxylist:
-                                full_folder_path = os.path.join(f"./tdatatosession/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))  
-                        
-                        
                     folder_to_clear = './tdatatosession'
-                    
+                    clear_folder(folder_to_clear)
 
                 elif sign == 'sessiontotdata':
                     caption = update.message.caption
@@ -4045,26 +3679,27 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 zip_ref.extract(member=file_info, path=f'sesstotdata/')
                             else:
                                 pass
-                    message_id = await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持</b>', parse_mode='HTML')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='session to tdata中，请稍后')
                     kepro = []
                     fenjin = []
-                    wxylist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0}
                     await asyncio.gather(
-                        *(xieyizhuanzhideng('sesstotdata', subfolder, semaphore, result_dict, kepro, fenjin, wxylist) for subfolder in folder_names))
+                        *(xieyizhuanzhideng('sesstotdata', subfolder, semaphore, result_dict, kepro, fenjin) for subfolder in folder_names))
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
-'''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+                    '''
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
 
                     shijiancuo = int(time.time())
-                    zip_filename = f"./sesstotdata/session转换Tdata -存活- {len(kepro)}.zip"
+                    zip_filename = f"./sesstotdata/健康（{len(kepro)}）.zip"
                     if len(kepro) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件夹及其内容添加到 zip 文件中
@@ -4096,7 +3731,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
                     
-                    zip_filename = f"./sesstotdata/session转换Tdata -无效- {len(fenjin)}.zip"
+                    zip_filename = f"./sesstotdata/封禁（{len(fenjin)}）.zip"
                     if len(fenjin) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4110,23 +3745,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     zipf.write(session_file_path, os.path.basename(session_file_path))
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     
-                    
-                    zip_filename = f"./sesstotdata/session转换Tdata -错误- {len(wxylist)}.zip"
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for file_name in wxylist:
-                                # 检查是否存在以 .json 或 .session 结尾的文件
-                                json_file_path = os.path.join(f"./sesstotdata/", file_name + ".json")
-                                session_file_path = os.path.join(f"./sesstotdata/", file_name + ".session")
-                                if os.path.exists(json_file_path):
-                                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                                if os.path.exists(session_file_path):
-                                    zipf.write(session_file_path, os.path.basename(session_file_path))
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                    
                     folder_to_clear = './sesstotdata'
-                    
+                    clear_folder(folder_to_clear)
 
 
 
@@ -4145,9 +3765,10 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     jianceid = []
                     tj_dict = {}
                     session_files = []
+                    
                     ch_list = []
                     sh_list = []
-                    wxylist = []
+                    dj_list = []
                     with zipfile.ZipFile(new_file_path, 'r') as zip_ref:
                         for file_info in zip_ref.infolist():
                             filename = file_info.filename
@@ -4165,26 +3786,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 pass
 
                     user.update_one({'user_id': user_id}, {"$set": {"sign": 0}})
-                    message_id = await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持</b>', parse_mode='HTML')
+                    await context.bot.send_message(chat_id=user_id,
+                                                                text='检测号存活中，超过10分钟没反应联系技术')
 
 
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'dj': 0}
                     await asyncio.gather(
-                        *(xieyijiance('检测协议号', subfolder, semaphore, result_dict,ch_list, sh_list, wxylist) for subfolder in session_files))
+                        *(xieyijiance('检测协议号', subfolder, semaphore, result_dict,ch_list, sh_list, dj_list) for subfolder in session_files))
 
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
+♻️ 检测数量：{len(session_files)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 冻结数量：{result_dict['dj']}
+❌ 死号数量：{result_dict['dead']}
 '''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
-                
-                    
+                    await context.bot.send_message(chat_id=user_id,text=fstext)
+
                     
                     shijiancuo = int(time.time())
-                    zip_filename = f"./检测协议号/检查Session -存活- {len(ch_list)}.zip"
+                    zip_filename = f"./检测协议号/健康（{len(ch_list)}）.zip"
                     if len(ch_list) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4199,10 +3823,21 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     
                     
+                    zip_filename = f"./检测协议号/冻结（{len(dj_list)}）.zip"
+                    if len(dj_list) != 0:
+                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+                            # 将每个文件及其内容添加到 zip 文件中
+                            for file_name in dj_list:
+                                # 检查是否存在以 .json 或 .session 结尾的文件
+                                json_file_path = os.path.join(f"./检测协议号/", file_name + ".json")
+                                session_file_path = os.path.join(f"./检测协议号/", file_name + ".session")
+                                if os.path.exists(json_file_path):
+                                    zipf.write(json_file_path, os.path.basename(json_file_path))
+                                if os.path.exists(session_file_path):
+                                    zipf.write(session_file_path, os.path.basename(session_file_path))
+                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     
-                    
-                    
-                    zip_filename = f"./检测协议号/检查Session -无效- {len(sh_list)}.zip"
+                    zip_filename = f"./检测协议号/封禁（{len(sh_list)}）.zip"
                     if len(sh_list) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4215,24 +3850,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 if os.path.exists(session_file_path):
                                     zipf.write(session_file_path, os.path.basename(session_file_path))
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                        
-                    zip_filename = f"./检测协议号/检查Session -错误- {len(wxylist)}.zip"
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for file_name in wxylist:
-                                # 检查是否存在以 .json 或 .session 结尾的文件
-                                json_file_path = os.path.join(f"./检测协议号/", file_name + ".json")
-                                session_file_path = os.path.join(f"./检测协议号/", file_name + ".session")
-                                if os.path.exists(json_file_path):
-                                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                                if os.path.exists(session_file_path):
-                                    zipf.write(session_file_path, os.path.basename(session_file_path))
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                    
-                    
+
                     
                 elif sign == 'xyzpdjqr':
                     caption = update.message.caption
@@ -4350,26 +3968,27 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 zip_ref.extract(member=file_info, path=f'sesstotdata/')
                             else:
                                 pass
-                    message_id = await context.bot.send_message(chat_id=user_id, text='🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='重置二步中，请稍后')
                     kepro = []
                     fenjin = []
-                    wxylist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0}
                     await asyncio.gather(
-                        *(xyerbzz('sesstotdata', subfolder, semaphore, result_dict, kepro, fenjin, wxylist) for subfolder in folder_names))
+                        *(xyerbzz('sesstotdata', subfolder, semaphore, result_dict, kepro, fenjin) for subfolder in folder_names))
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
-'''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+                    '''
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
 
                     shijiancuo = int(time.time())
-                    zip_filename = f"./sesstotdata/协议重置二步 -成功- {len(kepro)}.zip"
+                    zip_filename = f"./sesstotdata/健康（{len(kepro)}）.zip"
                     if len(kepro) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4385,22 +4004,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 
 
                     
-                    zip_filename = f"./sesstotdata/协议重置二步 -无效- {len(wxylist)}.zip"
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for file_name in wxylist:
-                                # 检查是否存在以 .json 或 .session 结尾的文件
-                                json_file_path = os.path.join(f"./sesstotdata/", file_name + ".json")
-                                session_file_path = os.path.join(f"./sesstotdata/", file_name + ".session")
-                                if os.path.exists(json_file_path):
-                                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                                if os.path.exists(session_file_path):
-                                    zipf.write(session_file_path, os.path.basename(session_file_path))
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                    
-                    
-                    zip_filename = f"./sesstotdata/协议重置二步 -错误- {len(fenjin)}.zip"
+                    zip_filename = f"./sesstotdata/封禁（{len(fenjin)}）.zip"
                     if len(fenjin) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4415,7 +4019,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     
                     folder_to_clear = './sesstotdata'
-                    
+                    clear_folder(folder_to_clear)
                     
                 elif sign == 'xytcqtsb':
                     caption = update.message.caption
@@ -4444,26 +4048,27 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                 zip_ref.extract(member=file_info, path=f'sesstotdata/')
                             else:
                                 pass
-                    message_id = await context.bot.send_message(chat_id=user_id, text='🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='踢出设备中，请稍后')
                     kepro = []
                     fenjin = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    wxylist = []
-                    result_dict = {'alive': 0, 'dead': 0, 'wxy':0}
+                    result_dict = {'alive': 0, 'dead': 0}
                     await asyncio.gather(
-                        *(xytcsb('sesstotdata', subfolder, semaphore, result_dict, kepro, fenjin, wxylist) for subfolder in folder_names))
+                        *(xytcsb('sesstotdata', subfolder, semaphore, result_dict, kepro, fenjin) for subfolder in folder_names))
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
-'''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+                    '''
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
 
                     shijiancuo = int(time.time())
-                    zip_filename = f"./sesstotdata/协议踢出设备 -成功- {len(kepro)}.zip"
+                    zip_filename = f"./sesstotdata/健康（{len(kepro)}）.zip"
                     if len(kepro) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4478,23 +4083,8 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                                 
 
-
-                    zip_filename = f"./sesstotdata/协议踢出设备 -错误- {len(wxylist)}.zip"
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for file_name in wxylist:
-                                # 检查是否存在以 .json 或 .session 结尾的文件
-                                json_file_path = os.path.join(f"./sesstotdata/", file_name + ".json")
-                                session_file_path = os.path.join(f"./sesstotdata/", file_name + ".session")
-                                if os.path.exists(json_file_path):
-                                    zipf.write(json_file_path, os.path.basename(json_file_path))
-                                if os.path.exists(session_file_path):
-                                    zipf.write(session_file_path, os.path.basename(session_file_path))
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-
                     
-                    zip_filename = f"./sesstotdata/协议踢出设备 -无效- {len(fenjin)}.zip"
+                    zip_filename = f"./sesstotdata/封禁（{len(fenjin)}）.zip"
                     if len(fenjin) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4509,7 +4099,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     
                     folder_to_clear = './sesstotdata'
-                    
+                    clear_folder(folder_to_clear)
                     
                     
                 elif sign == 'tcqtsb':
@@ -4538,27 +4128,28 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     folder_names.append(extracted_folder_name)
                             zip_ref.extract(file_info, f'tdatatosession/')
 
-                    message_id = await context.bot.send_message(chat_id=user_id, text='🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='踢出设备中，请稍后')
 
                     kepro = []
                     fenjin = []
-                    wxylist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0}
                     await asyncio.gather(
-                        *(zdqtcbsb('tdatatosession', subfolder, semaphore, result_dict, kepro, fenjin, wxylist) for subfolder in
+                        *(zdqtcbsb('tdatatosession', subfolder, semaphore, result_dict, kepro, fenjin) for subfolder in
                           folder_names))
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
-'''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+                                        '''
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
  
                     shijiancuo = int(time.time())
-                    zip_filename = f"tdatatosession/直登踢出设备 -成功- {len(kepro)}.zip"
+                    zip_filename = f"tdatatosession/健康（{len(kepro)}）.zip"
                     if len(kepro) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4579,29 +4170,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
-
-                    zip_filename = f"tdatatosession/直登踢出设备 -错误- {len(wxylist)}.zip"
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in wxylist:
-                                full_folder_path = os.path.join(f"./tdatatosession/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-
-                    zip_filename = f"tdatatosession/直登踢出设备 -无效- {len(fenjin)}.zip"
+                    zip_filename = f"tdatatosession/封禁（{len(fenjin)}）.zip"
                     if len(fenjin) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4622,7 +4191,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     folder_to_clear = './tdatatosession'
-                    
+                    clear_folder(folder_to_clear)
                     
                 elif sign == 'zdzz2fa':
                     caption = update.message.caption
@@ -4650,27 +4219,28 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     folder_names.append(extracted_folder_name)
                             zip_ref.extract(file_info, f'tdatatosession/')
 
-                    message_id = await context.bot.send_message(chat_id=user_id, text='🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持')
+                    message_id = await context.bot.send_message(chat_id=user_id, text='重置二步中，请稍后')
 
                     kepro = []
                     fenjin = []
-                    wxylist = []
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0, 'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0}
                     await asyncio.gather(
-                        *(zderbzz('tdatatosession', subfolder, semaphore, result_dict, kepro, fenjin, wxylist) for subfolder in
+                        *(zderbzz('tdatatosession', subfolder, semaphore, result_dict, kepro, fenjin) for subfolder in
                           folder_names))
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
-'''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
+♻️ 检测数量：{len(folder_names)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 死号数量：{result_dict['dead']}
+                                        '''
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
  
                     shijiancuo = int(time.time())
-                    zip_filename = f"tdatatosession/直登重置二步 -成功- {len(kepro)}.zip"
+                    zip_filename = f"tdatatosession/健康（{len(kepro)}）.zip"
                     if len(kepro) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4691,31 +4261,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
-
-                    zip_filename = f"tdatatosession/直登重置二步 -错误- {len(wxylist)}.zip"
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件及其内容添加到 zip 文件中
-                            for folder_name in wxylist:
-                                full_folder_path = os.path.join(f"./tdatatosession/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-    
-    
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-
-
-
-                    zip_filename = f"tdatatosession/直登重置二步 -无效- {len(fenjin)}.zip"
+                    zip_filename = f"tdatatosession/封禁（{len(fenjin)}）.zip"
                     if len(fenjin) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件及其内容添加到 zip 文件中
@@ -4736,7 +4282,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
     
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
                     folder_to_clear = './tdatatosession'
-                    
+                    clear_folder(folder_to_clear)
                     
                     
                 elif sign == 'xadagd123':
@@ -4779,12 +4325,9 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     jianceid = []
                     tj_dict = {}
                     session_files = []
-                    
                     ch_list = []
                     sh_list = []
-                    wxylist = []
-                    
-                    
+                    dj_list = []
                     with zipfile.ZipFile(new_file_path, 'r') as zip_ref:
                         for file_info in zip_ref.infolist():
                             match = re.match(r'^([^/]+)/.*$', file_info.filename)
@@ -4800,23 +4343,27 @@ async def textkeyboard(update: Update, context: CallbackContext):
 
 
                     user.update_one({'user_id': user_id}, {"$set": {"sign": 0}})
-                    message_id = await context.bot.send_message(chat_id=user_id, text='<b>🔄 正在处理中，请稍后！如超过5分钟无反应！请联系技术支持</b>', parse_mode='HTML')
+                    message_id = await context.bot.send_message(chat_id=user_id,
+                                                                text='检测号存活中，超过10分钟没反应联系技术')
 
                     semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
-                    result_dict = {'alive': 0, 'dead': 0,'wxy': 0}
+                    result_dict = {'alive': 0, 'dead': 0, 'dj': 0}
                     await asyncio.gather(
-                        *(jiancecunhuo('检测号包', subfolder, semaphore, result_dict, ch_list, sh_list, wxylist) for subfolder in session_files))
+                        *(jiancecunhuo('检测号包', subfolder, semaphore, result_dict, ch_list, sh_list, dj_list) for subfolder in session_files))
 
                     fstext = f'''
-<b>✅ 成功（活跃数量）：{result_dict['alive']}
-❌ 無效（多ip，封禁）：{result_dict['dead']}
-⚠️ 錯誤（服务器未响应）：{result_dict['wxy']}</b>
-'''
-                    await context.bot.send_message(chat_id=user_id, text=fstext,parse_mode='HTML')
+♻️ 检测数量：{len(session_files)}
+
+✅ 存活数量：{result_dict['alive']}
+
+❌ 冻结数量：{result_dict['dj']}
+❌ 死号数量：{result_dict['dead']}
+                    '''
+                    await context.bot.send_message(chat_id=user_id, text=fstext)
 
 
                     shijiancuo = int(time.time())
-                    zip_filename = f"./检测号包/检查Tdata -存活- {len(ch_list)}.zip"
+                    zip_filename = f"./检测号包/健康（{len(ch_list)}）.zip"
                     if len(ch_list) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
                             # 将每个文件夹及其内容添加到 zip 文件中
@@ -4834,7 +4381,29 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
                                     pass
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                    zip_filename = f"./检测号包/检查Tdata -无效- {len(sh_list)}.zip"
+                        
+                        
+                    zip_filename = f"./检测号包/冻结（{len(dj_list)}）.zip"
+
+                    if len(dj_list) != 0:
+                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+                            # 将每个文件夹及其内容添加到 zip 文件中
+                            for folder_name in dj_list:
+                                full_folder_path = os.path.join(f"./检测号包/", folder_name)
+                                if os.path.exists(full_folder_path):
+                                    # 添加文件夹及其内容
+                                    for root, dirs, files in os.walk(full_folder_path):
+                                        for file in files:
+                                            file_path = os.path.join(root, file)
+                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
+                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
+                                                                                                            full_folder_path)))
+                                else:
+                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
+                                    pass
+                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
+                        
+                    zip_filename = f"./检测号包/封禁（{len(sh_list)}）.zip"
                     
                     if len(sh_list) != 0:
                         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
@@ -4853,29 +4422,7 @@ async def textkeyboard(update: Update, context: CallbackContext):
                                     # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
                                     pass
                         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                        
-                    zip_filename = f"./检测号包/检查Tdata -错误- {len(wxylist)}.zip"
-                    
-                    if len(wxylist) != 0:
-                        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-                            # 将每个文件夹及其内容添加到 zip 文件中
-                            for folder_name in wxylist:
-                                full_folder_path = os.path.join(f"./检测号包/", folder_name)
-                                if os.path.exists(full_folder_path):
-                                    # 添加文件夹及其内容
-                                    for root, dirs, files in os.walk(full_folder_path):
-                                        for file in files:
-                                            file_path = os.path.join(root, file)
-                                            # 使用相对路径在压缩包中添加文件，并设置压缩包内部的路径
-                                            zipf.write(file_path, os.path.join(folder_name, os.path.relpath(file_path,
-                                                                                                            full_folder_path)))
-                                else:
-                                    # update.message.reply_text(f"文件夹 '{folder _name}' 不存在！")
-                                    pass
-                        await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
-                        
-                    
+
                     
                 elif sign == 'add2fa':
 
@@ -4937,292 +4484,6 @@ async def textkeyboard(update: Update, context: CallbackContext):
                     await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
 
-async def yhlist(update: Update, context: CallbackContext):
-    chat = update.effective_chat
-    # print(chat)
-    if chat.type == 'private':
-        user_id = chat['id']
-        chat_id = user_id
-        username = chat['username']
-        firstname = chat['first_name']
-        fullname = chat['full_name']
-        
-        
-        jilu_list = list(user.find({}, limit=10, sort=[('creation_time', -1)]))
-        keyboard = []
-        text_list = []
-        count = 1
-        for i in jilu_list:
-            df_id = i['user_id']
-            df_username = i['username']
-            df_fullname = i['fullname']
-            USDT = i['USDT']
-            text_list.append(
-                f'{count}. <a href="tg://user?id={df_id}">{df_fullname}</a> ID:<code>{df_id}</code>-@{df_username}-余额:{USDT}')
-            count += 1
-        if len(list(user.find({}))) > 10:
-            keyboard.append([InlineKeyboardButton('下一页', callback_data=f'yhnext 10:{count}')])
-
-    
-        text_list = '\n'.join(text_list)
-        try:
-            await context.bot.send_message(chat_id=user_id,text=text_list, parse_mode='HTML', reply_markup=InlineKeyboardMarkup(keyboard))
-        except:
-            pass
-
-
-
-async def yhnext(update: Update, context: CallbackContext):
-    query = update.callback_query
-    await query.answer()
-    data = query.data.replace('yhnext ', '')
-    page = data.split(":")[0]
-    user_id = update.effective_user.id
-    count = int(data.split(":")[1])
-    keyboard = []
-    text_list = []
-    jilu_list = list(user.find({}, skip=int(page), limit=10, sort=[('creation_time', -1)]))
-    for i in jilu_list:
-        df_id = i['user_id']
-        df_username = i['username']
-        df_fullname = i['fullname'].replace("<","").replace('>','')
-        USDT = i['USDT']
-        text_list.append(
-            f'{count}. <a href="tg://user?id={df_id}">{df_fullname}</a> ID:<code>{df_id}</code>-@{df_username}-余额:{USDT}')
-
-        count += 1
-    if len(list(user.find({}, skip=int(page)))) > 10:
-        if int(page) == 0:
-            keyboard.append([InlineKeyboardButton('下一页', callback_data=f'yhnext {int(page) + 10}:{count}')])
-        else:
-            keyboard.append([InlineKeyboardButton('上一页', callback_data=f'yhnext {int(page) - 10}:{count - 20}'),
-                             InlineKeyboardButton('下一页', callback_data=f'yhnext {int(page) + 10}:{count}')])
-    else:
-        keyboard.append([InlineKeyboardButton('上一页', callback_data=f'yhnext {int(page) - 10}:{count - 20}')])
-
-    text_list = '\n'.join(text_list)
-
-    await query.edit_message_text(text=text_list, reply_markup=InlineKeyboardMarkup(keyboard),
-                                parse_mode='HTML')
-
-
-async def fbgg(update: Update, context: CallbackContext):
-    chat = update.effective_chat
-    # print(chat)
-    if chat.type == 'private':
-        user_id = chat['id']
-        chat_id = user_id
-        username = chat['username']
-        firstname = chat['first_name']
-        fullname = chat['full_name']
-        timer = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        lastname = chat['last_name']
-        text = update.message.text
-
-        fstext = text.replace('/gg ', '')
-        fstext1 = f'''
-设置查询ID
-        '''
-        keyboard = [[InlineKeyboardButton('取消发送', callback_data=f'close {user_id}')]]
-
-        qfid = generate_24bit_uid()
-
-        context.user_data[f'{qfid}'] = fstext
-
-        user.update_one({'user_id': user_id}, {"$set": {'sign': f'fbgg {qfid}'}})
-        await context.bot.send_message(chat_id=user_id, text=fstext1, reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-async def getcha(update: Update, context: CallbackContext):
-    chat = update.effective_chat
-    if chat.type == 'private':
-        user_id = chat['id']
-        chat_id = user_id
-        username = chat['username']
-        firstname = chat['first_name']
-        fullname = chat['full_name']
-        timer = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        lastname = chat['last_name']
-        text = update.message.text
-        text1 = text.split(' ')
-        user_list = user.find_one({'user_id': user_id})
-        USDT = user_list['USDT']
-        state = user_list['state']
-
-        if len(text1) == 2:
-            cxid = text1[1]
-
-            jilu_list = list(qfck.find({'cxid': cxid}, limit=10, sort=[('timer', -1)]))
-            keyboard = []
-            text_list = []
-            count = 1
-            for i in jilu_list:
-                df_id = i['user_id']
-                df_username = i['username']
-                df_fullname = i['fullname']
-                timer = i['timer']
-                text_list.append(
-                    f'{count}. <a href="tg://user?id={df_id}">{df_fullname}</a> ID:<code>{df_id}</code>-@{df_username}-{timer}')
-                count += 1
-            if len(list(qfck.find({'cxid': cxid}))) > 10:
-                keyboard.append([InlineKeyboardButton('下一页', callback_data=f'ckqfnext 10:{count}:{cxid}')])
-
-            keyboard.append([InlineKeyboardButton('关闭', callback_data=f'close {user_id}')])
-
-            text_list = '\n'.join(text_list)
-            try:
-                await context.bot.send_message(chat_id=user_id, text=text_list, parse_mode='HTML',
-                                             reply_markup=InlineKeyboardMarkup(keyboard))
-            except:
-                pass
-
-        else:
-            await context.bot.send_message(chat_id=chat_id, text='格式为: /get 查询ID，有一个空格')
-
-
-async def shengcheng(update: Update, context: CallbackContext):
-    us = update.effective_user
-    chat_id = update.effective_chat.id
-    user_id = us.id
-    username = us.username
-    fullname = us.full_name
-    lastname = us.last_name
-    reply_to_message_id = update.effective_message.message_id
-    user_list = user.find_one({'user_id': user_id})
-    state = user_list['state']
-    if state == '4':
-        money = update.message.text.replace('生成', '')
-        if is_number(money):
-            money = int(money)
-            t = time.time()
-            shijiancuo = int(round(t * 1000000))
-            jiamitext = f'{shijiancuo}黄色大鸭子{money}'
-            jiami = encrypt('Lk5Uz3slx3BrAghS1aaW5AY1', jiamitext)
-            CDK = f'CDK:{jiami}'
-            keydata(shijiancuo, CDK, int(money))
-            text = f'''
-生成{money}天充值卡
-<code>{CDK}</code>
-            '''
-            await context.bot.send_message(chat_id=user_id, text=text, parse_mode='HTML')
-        else:
-            await context.bot.send_message(chat_id=user_id, text='请输入数字生成, 例如生成111')
-
-
-async def chongzhi(update: Update, context: CallbackContext):
-    us = update.effective_user
-    chat = update.effective_chat
-    if chat['type'] == 'private':
-        user_id = us.id
-        fullname = us.full_name
-        CDK = update.message.text.replace('CDK:', '').replace(' ', '')
-        try:
-            jiemitext = decrypt(CDK)
-        except:
-            text = f'''
-充值CDK
-充值失败请确认CDK
-            '''
-            await context.bot.send_message(chat_id=user_id, text=text, parse_mode='HTML')
-            return
-        if '黄色大鸭子' not in jiemitext:
-            text = f'''
-充值CDK
-充值失败请确认CDK
-            '''
-            await context.bot.send_message(chat_id=user_id, text=text, parse_mode='HTML')
-        retext = re.findall('\d+\.?\d*', jiemitext)
-        shijiancuo = int(retext[0])
-        money = int(float(retext[1]))
-        czkmoney = int(float(retext[1]))
-        if keytext.find_one({"bianhao": shijiancuo, 'user_id': {'$ne': None}}) == None:
-            user_list = user.find_one({"user_id": user_id})
-            ptgrade = user_list['ptgrade']
-            if ptgrade == '新用户':
-                await context.bot.send_message(chat_id=user_id,text='请先添加关键词后，在使用充值码')
-            else:
-                if money == 0:
-                    keytext.update_one({"bianhao": shijiancuo}, {"$set": {"user_id": user_id}})
-                    user.update_one({'user_id': user_id}, {"$set": {'Expiration': '9999-12-30 00:00:00'}})
-                    text = f'''
-充值永久卡
-当前过期时间为: 9999-12-30 00:00:00
-                    '''
-                    await context.bot.send_message(chat_id=user_id, text=text)
-                    return
-                
-                Expiration = user_list['Expiration']
-                xianzaishijian = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                if xianzaishijian >= Expiration:
-                    keytext.update_one({"bianhao": shijiancuo}, {"$set": {"user_id": user_id}})
-                    Expiration = (datetime.now() + timedelta(days=+int(money))).strftime(f"%Y-%m-%d %H:%M:%S")
-                    user.update_one({'user_id': user_id}, {"$set": {'Expiration': Expiration}})
-                    text = f'''
-使用{money}天充值卡
-当前过期时间为: {Expiration}
-    '''
-                    await context.bot.send_message(chat_id=user_id, text=text)
-                else:
-                    to_now = datetime.strptime(Expiration, '%Y-%m-%d %H:%M:%S')
-                    keytext.update_one({"bianhao": shijiancuo}, {"$set": {"user_id": user_id}})
-                    Expiration = (to_now + timedelta(days=+int(money))).strftime(f"%Y-%m-%d %H:%M:%S")
-                    user.update_one({'user_id': user_id}, {"$set": {'Expiration': Expiration}})
-                    text = f'''
-使用{money}天充值卡
-当前过期时间为: {Expiration}
-    '''
-                    await context.bot.send_message(chat_id=user_id, text=text)
-        else:
-            text = f'''
-充值CDK
-CDK已使用,充值失败
-            '''
-            await context.bot.send_message(chat_id=user_id, text=text)
-
-
-def encrypt(key, content):
-    """
-    DES3加密
-    key,iv使用同一个
-    模式cbc
-    填充pkcs7
-    :param key: 密钥
-    :param content: 加密内容
-    :return:
-    """
-    key_bytes = bytes(key, encoding='utf-8')
-    iv = key_bytes
-    cipher = DES3.new(key_bytes, DES3.MODE_ECB)
-    # 处理明文
-    content_padding = pkcs7padding(content)
-    # 加密
-    encrypt_bytes = cipher.encrypt(bytes(content_padding, encoding='utf-8'))
-    # 重新编码
-    result = str(base64.b64encode(encrypt_bytes), encoding='utf-8')
-    return result
-
-def pkcs7padding(text):
-    """
-    明文使用PKCS7填充
-    最终调用DES3加密方法时，传入的是一个byte数组，要求是16的整数倍，因此需要对明文进行处理
-    :param text: 待加密内容(明文)
-    :return:
-    """
-    bs = DES3.block_size  # 16
-    length = len(text)
-    bytes_length = len(bytes(text, encoding='utf-8'))
-    # tips：utf-8编码时，英文占1个byte，而中文占3个byte
-    padding_size = length if (bytes_length == length) else bytes_length
-    padding = bs - padding_size % bs
-    # tips：chr(padding)看与其它语言的约定，有的会使用'\0'
-    padding_text = chr(padding) * padding
-    return text + padding_text
-
-def decrypt(text):
-    cryptor = DES3.new(bytes('Lk5Uz3slx3BrAghS1aaW5AY1', encoding='utf-8'), DES3.MODE_ECB)
-    b = str(cryptor.decrypt(base64.b64decode(text)), encoding='utf-8')
-    return b
-
 def init(token):
     application = Application.builder().concurrent_updates(3).token(token).build()
     application.add_handlers(handlers={
@@ -5231,19 +4492,10 @@ def init(token):
         ],
         1: [
             CommandHandler('start', start),
-            CommandHandler('list', yhlist),
-            CommandHandler('gg', fbgg),
-            CommandHandler('get', getcha),
-            
-            
-            MessageHandler(filters.Regex('生成\d+'), shengcheng),
-            MessageHandler(filters.Regex('CDK'), chongzhi),
+
             MessageHandler(
                 (filters.TEXT | filters.PHOTO | filters.ANIMATION | filters.VIDEO | filters.ALL) & ~(filters.COMMAND),
                 textkeyboard),
-                
-                
-                
             CallbackQueryHandler(close, pattern='close '),
             CallbackQueryHandler(jcehao, pattern='jcehao'),
             CallbackQueryHandler(add2fa, pattern='add2fa'),
@@ -5279,8 +4531,9 @@ def init(token):
             CallbackQueryHandler(qrxxygeb , pattern='qrxxygeb '),
             CallbackQueryHandler(xadagd123 , pattern='xadagd123'),
             CallbackQueryHandler(addjson , pattern='addjson'),
-            CallbackQueryHandler(yhnext , pattern='yhnext '),
-            CallbackQueryHandler(clqfclo , pattern='clqfclo '),
+            CallbackQueryHandler(xieyicaifen , pattern='xieyicaifen'),
+            CallbackQueryHandler(dexyfen , pattern='dexyfen '),
+            CallbackQueryHandler(zdxyfen , pattern='zdxyfen '),
         ]
     })
     # application.job_queue.run_repeating(callback=fasongmessage, interval=3)
@@ -5293,5 +4546,5 @@ if __name__ == '__main__':
     for i in ['检测协议号', '检测号包', '临时session', '检测号存活专用', 'tdatatosession', '已添加二步', '添加二步号包',
               '添加二步专用', 'sesstotdata', '下载专用','更改二步tdata', '二步号包']:
         create_folder_if_not_exists(i)
-    init('7962591253:AAG01wk0JrpT_Q6nvKPA6EOuxzd2wb6T-CI')
+    init('7352528099:AAFPiuUMYx2CjKzMWf7PsqlX41yVerbknag')
 
