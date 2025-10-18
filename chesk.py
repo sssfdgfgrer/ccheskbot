@@ -2,6 +2,7 @@ from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, f
     ConversationHandler, ChatMemberHandler
 
 from mongo import *
+from two_factor_auth_manager import TwoFactorAuthManager, batch_modify_2fa_tdata, batch_modify_2fa_session
 import base64, random
 from telethon import utils
 import telethon, pickle, asyncio, os
@@ -623,119 +624,55 @@ async def zhidengzhuan(selected_item, phone, semaphore, result_dict, kepro, fenj
         kepro.append(phone)
         await client.disconnect()
 
-async def plgaxyierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro):
-    async with semaphore:
-        jeb1 = jeb.split(' ')
-        oldAPI = API.TelegramDesktop.Generate(system="windows", unique_id=f"{phone}")
-        client = TelegramClient(f"{selected_item}/{phone}",oldAPI,timeout=20)
-        file_path = f"{selected_item}/{phone}"
-        try:
-            await asyncio.wait_for(client.connect(), 20)
-        except asyncio.exceptions.TimeoutError:
-            result_dict['dead'] += 1
-            await client.disconnect()
-            fenjin.append(phone)
-            return
-        except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
-            result_dict['dead'] += 1
-            await client.disconnect()
-            fenjin.append(phone)
-            return
-        except telethon.errors.rpcerrorlist.AuthKeyUnregisteredError:
-            result_dict['dead'] += 1
-            await client.disconnect()
-            fenjin.append(phone)
-            return
-
-
+async def plgaxyierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro, manager=None):
+    """Refactored to use TwoFactorAuthManager for better async handling."""
+    # Create manager if not provided
+    if manager is None:
+        manager = TwoFactorAuthManager(base_path=selected_item)
+    
+    old_passwords = jeb.split(' ')
+    success, error = await manager.modify_2fa_session(phone, old_passwords, xeb, semaphore, selected_item)
+    
+    if success:
         result_dict['alive'] += 1
-        if jeb == '无':
-            try:
-                erbu = await client.edit_2fa(new_password=xeb)
-                result_dict['cgeb'] += 1
-                kepro.append(phone)
-            except:
-                result_dict['sbeb'] += 1
-                sbpro.append(phone)
+        result_dict['cgeb'] += 1
+        kepro.append(phone)
+    else:
+        # Check if it's a connection error (dead account)
+        if error and any(x in error for x in ['timeout', 'Duplicate auth key', 'Unregistered auth key', 'Connection error']):
+            result_dict['dead'] += 1
         else:
-            ggstate = 0
-            for eb in jeb1:
-                try:
-                    erbu = await client.edit_2fa(current_password=eb, new_password=xeb)
-                    result_dict['cgeb'] += 1
-                    kepro.append(phone)
-                    ggstate = 1
-                    break
-                except Exception as f:
-                    continue
-            if ggstate == 0:
-                result_dict['sbeb'] += 1
-                sbpro.append(phone)
-        await client.disconnect()
+            result_dict['alive'] += 1
+            result_dict['sbeb'] += 1
+        sbpro.append(phone)
+        if manager:
+            manager.add_failed_account(phone, error or "Unknown error")
 
 
 
-async def plgaierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro):
-    async with semaphore:
-        jeb1 = jeb.split(' ')
-        lujin = f'{selected_item}/{phone}/tdata'
-        tdesk = TDesktop(lujin)
-        assert tdesk.isLoaded()
-
-        client = await tdesk.ToTelethon(session=f"临时session/{phone}", flag=UseCurrentSession)
-
-        file_path = f"临时session/{phone}.session"
-
-        try:
-            await asyncio.wait_for(client.connect(), 20)
-        except asyncio.exceptions.TimeoutError:
-            result_dict['dead'] += 1
-            sbpro.append(phone)
-            await client.disconnect()
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            return
-        except telethon.errors.rpcerrorlist.AuthKeyDuplicatedError:
-            result_dict['dead'] += 1
-            sbpro.append(phone)
-            await client.disconnect()
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            return
-
-        # a = await client.get_me()
-        # if a is None:
-        #     result_dict['dead'] += 1
-        #     await client.disconnect()
-        #     if os.path.exists(file_path):
-        #         os.remove(file_path)
-        #     return
+async def plgaierbu(selected_item, phone, semaphore, result_dict, jeb, xeb, kepro, sbpro, manager=None):
+    """Refactored to use TwoFactorAuthManager for better async handling."""
+    # Create manager if not provided
+    if manager is None:
+        manager = TwoFactorAuthManager(base_path=selected_item)
+    
+    old_passwords = jeb.split(' ')
+    success, error = await manager.modify_2fa_tdata(phone, old_passwords, xeb, semaphore)
+    
+    if success:
         result_dict['alive'] += 1
-        if jeb == '无':
-            try:
-                erbu = await client.edit_2fa(new_password=xeb)
-                result_dict['cgeb'] += 1
-                kepro.append(phone)
-            except:
-                result_dict['sbeb'] += 1
-                sbpro.append(phone)
+        result_dict['cgeb'] += 1
+        kepro.append(phone)
+    else:
+        # Check if it's a connection error (dead account)
+        if error and any(x in error for x in ['timeout', 'Duplicate auth key', 'Unregistered auth key', 'Connection error']):
+            result_dict['dead'] += 1
         else:
-            ggstate = 0
-            for eb in jeb1:
-                try:
-                    erbu = await client.edit_2fa(current_password=eb, new_password=xeb)
-                    result_dict['cgeb'] += 1
-                    kepro.append(phone)
-                    ggstate = 1
-                    break
-                except Exception as f:
-                    continue
-            if ggstate == 0:
-                result_dict['sbeb'] += 1
-                sbpro.append(phone)
-        await client.disconnect()
-        if os.path.exists(file_path):
-            os.remove(file_path)
+            result_dict['alive'] += 1
+            result_dict['sbeb'] += 1
+        sbpro.append(phone)
+        if manager:
+            manager.add_failed_account(phone, error or "Unknown error")
 
 
 async def zdshuangxiang(selected_item, phone, semaphore, result_dict, kepro, sxjin):
@@ -1175,12 +1112,16 @@ async def qrxxygeb(update: Update, context: CallbackContext):
     folder_names = []
     for i in gg_list:
         folder_names.append(i)
+    
+    # Use TwoFactorAuthManager for better async handling
+    manager = TwoFactorAuthManager(base_path='更改二步tdata')
     kepro = []
     sbpro = []
-    semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
+    semaphore = asyncio.Semaphore(10)
     result_dict = {'alive': 0, 'dead': 0, 'cgeb': 0, 'sbeb': 0}
+    
     await asyncio.gather(
-        *(plgaxyierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb,xeb, kepro, sbpro) for subfolder in
+        *(plgaxyierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb, xeb, kepro, sbpro, manager) for subfolder in
           folder_names))
 
     fstext = f'''
@@ -1213,9 +1154,16 @@ async def qrxxygeb(update: Update, context: CallbackContext):
         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
 
     if result_dict['sbeb'] != 0:
+        # Generate failure report
+        report_path = f"更改二步tdata/{user_id}_{int(time.time())}_failure_report.txt"
+        manager.generate_failure_report(report_path)
+        
         shijiancuo = int(time.time())
         zip_filename = f"更改二步tdata/{user_id}_{shijiancuo}失败.zip"
         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # Add failure report to ZIP
+            zipf.write(report_path, os.path.basename(report_path))
+            
             # 将每个文件及其内容添加到 zip 文件中
             for file_name in sbpro:
                 # 检查是否存在以 .json 或 .session 结尾的文件
@@ -1244,12 +1192,16 @@ async def qrxgeb(update: Update, context: CallbackContext):
     folder_names = []
     for i in gg_list:
         folder_names.append(i)
+    
+    # Use TwoFactorAuthManager for better async handling
+    manager = TwoFactorAuthManager(base_path='更改二步tdata')
     kepro = []
     sbpro = []
-    semaphore = asyncio.Semaphore(10)  # Define semaphore with a limit of 5 concurrent tasks
+    semaphore = asyncio.Semaphore(10)
     result_dict = {'alive': 0, 'dead': 0, 'cgeb': 0, 'sbeb': 0}
+    
     await asyncio.gather(
-        *(plgaierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb,xeb, kepro, sbpro) for subfolder in
+        *(plgaierbu('更改二步tdata', subfolder, semaphore, result_dict, jeb, xeb, kepro, sbpro, manager) for subfolder in
           folder_names))
 
     fstext = f'''
@@ -1264,9 +1216,9 @@ async def qrxgeb(update: Update, context: CallbackContext):
     folder_names = kepro
     xianswb = []
 
+    # Update TData password files for successful accounts
     for i in folder_names:
-        with open(f'更改二步tdata/{i}/2fa.txt', 'w') as f:
-            f.write(f'{xeb}')
+        manager.update_tdata_password_files(i, xeb, create_backup=True)
 
     if result_dict['cgeb'] != 0:
 
@@ -1291,10 +1243,16 @@ async def qrxgeb(update: Update, context: CallbackContext):
         await context.bot.send_document(chat_id=user_id, document=open(zip_filename, "rb"))
         
     if result_dict['sbeb'] != 0:
+        # Generate failure report
+        report_path = f"./二步号包/{user_id}_{int(time.time())}_failure_report.txt"
+        manager.generate_failure_report(report_path)
 
         shijiancuo = int(time.time())
         zip_filename = f"./二步号包/{user_id}_{shijiancuo}失败.zip"
         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # Add failure report to ZIP
+            zipf.write(report_path, os.path.basename(report_path))
+            
             # 将每个文件夹及其内容添加到 zip 文件中
             for folder_name in sbpro:
                 full_folder_path = os.path.join(f"./更改二步tdata/", folder_name)
